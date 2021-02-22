@@ -1,0 +1,7 @@
+{"unit_type": "KUBOTA-M7", "unit_number": "123456", "can_1": {"bus_number": 1, "bus_name": "Main Bus", "baudrate": 500, "log_std": 1, "log_ext": 1, "log_enabled": 1}, "log_start_time": "2021-01-11T16:03:47.563Z"}
+timestamp,CAN_BUS,CAN_EXT,CAN_ID,CAN_LEN,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7
+16.888,1,0,123,1,12
+26.974,1,0,12,8,12,23,10,00,00,00,00,00
+32.136,1,0,121,2,31,81
+34.245,1,1,121231,8,12,23,10,00,00,00,00,00
+37.830,1,1,121231,8,12,23,1A,FF,00,00,00,00
