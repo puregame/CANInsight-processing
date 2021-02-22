@@ -5,7 +5,7 @@ This project is designed to be used with the CAN Insight (Insert Link) hardware 
 The code constantly searches for new files to be placed into the `in_logs` folder, when a new log is detected it is processed and saved into the `out` folder. The project also processes CAN data by transforming it with the help of `.dbc` files. Final output is a processed `.mf4` file which contains physical values read on the CAN bus and can be easily graphed for analysis.
 
 ## Requirements
-Docker is the recommended method for running the project in its own container, however the code can be run directly on any machine by installing python and the required libraries in `requirements.txt.`. See below for step-by-step running instructions.
+Docker is the recommended method for running the project in its own container, however the code can be run directly on any machine by installing python and the required libraries in `requirements.txt`. See below for step-by-step running instructions.
 
 # Folder Setup and Mounting
 To process log files you must first set up the file structure which will store the input and output files. One top-level folder will store all required input and output files for the processing operations.
@@ -31,5 +31,3 @@ These steps are designed to work on a single PC, more advanced docker commands a
 6. Build the Docker image using the command `docker build -t can/log_processor -f .\Dockerfile .`
 7. Run a new docker container using the command `docker run --mount "type=bind,source=<folder created in step 2>,destination=/data/" -d can/log_processor`
 8. Place files into the `in_log` file and watch them get processed!
-
-docker run --mount "type=bind,source=C:\Software\can_data,destination=/data/" can/log_processor
