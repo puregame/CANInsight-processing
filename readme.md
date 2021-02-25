@@ -1,4 +1,4 @@
-# CAN Log Processor
+# CAN Insight Log Processor
 This project is designed to be used with the CAN Insight (Insert Link) hardware but could easily be adapted to work with any csv-style CAN logs.
 
 ## What It Does
