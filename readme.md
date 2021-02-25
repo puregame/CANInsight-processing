@@ -34,3 +34,7 @@ These steps are designed to work on a single PC, more advanced docker commands a
 6. Build the Docker image using the command `docker build -t can/log_processor -f .\Dockerfile .`
 7. Run a new docker container using the command `docker run --mount "type=bind,source=<folder created in step 2>,destination=/data/" -d can/log_processor`
 8. Place files into the `in_log` file and watch them get processed!
+
+
+# Roadmap
+- No future improvements currently planned. 
