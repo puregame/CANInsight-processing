@@ -34,8 +34,10 @@ CAN_SIGNAL_SOURCE=Source(
 )
 
 def get_dbc_file_list(folder):
-    files = os.listdir(folder)
-    return map(lambda x: folder/x, filter(lambda x: x[-4:]==".dbc", files))
+    if os.path.exists(folder):
+        files = os.listdir(folder)
+        return map(lambda x: folder/x, filter(lambda x: x[-4:]==".dbc", files))
+    return []
 
 def read_log_to_mf4(csv_file):
     f = open(csv_file, 'r')
