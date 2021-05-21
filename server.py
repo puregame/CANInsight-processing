@@ -16,14 +16,18 @@ def hello_world():
 def check_for_file():
     unit_type = request.args['unit_type']
     unit_number = request.args['unit_number']
-    log_time_file = request.args['log_time']
+    log_time_file = request.args['log_time'].replace(":", "-").replace(".","-")
     print("getting if file exists for: {},{},{}".format(unit_type, unit_number, log_time_file))
     if os.path.exists(Path("/data/out/{}/{}/in_logs_processed/{}.LOG".format(unit_type, unit_number, log_time_file))):
-        return ("PATH EXISTS!"), 200
-    return "path does not exit", 404
+        return "", 200
+    return "", 404
 
 @app.route('/data_file/', methods=['POST'])
 def post():
+    print(request.args)
+    print(request.content_length)
+    print(request.content_type)
+    print(request.__dict__)
     log_name = request.args['log_name']
     with open(LOG_FOLDER/"{}".format(log_name), 'wb') as the_file:
         the_file.write(request.data)

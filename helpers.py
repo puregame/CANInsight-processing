@@ -100,5 +100,7 @@ def read_log_to_mf4(csv_file):
     )
 
     mdf = MDF(version='4.11')
-    mdf.append(sig, acq_source=CAN_SIGNAL_SOURCE)
+    if len(ID) > 0:
+        # if there are no samples in the file then this will fail, only if there are samples should be append the signal
+        mdf.append(sig, acq_source=CAN_SIGNAL_SOURCE)
     return mdf, meta

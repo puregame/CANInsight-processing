@@ -9,7 +9,9 @@ import logging
 import os
 import time
 
-logging.basicConfig(filename='/data/can_processing.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='/data/can_processing.log', encoding='utf-8', level=logging.DEBUG,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 input_files = Path("/data/in_logs/")
 output_files = Path("/data/out/")
