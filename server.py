@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 app = Flask(__name__)
 
-LOG_FOLDER = Path("/data/in_logs/")
-LOG_FOLDER.mkdir(parents=True, exist_ok=True)
+# DATA_FOLDER = Path("/data/in_logs/")
+DATA_FOLDER = Path("./data/")
+DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 @app.route('/')
@@ -18,7 +19,7 @@ def check_for_file():
     unit_number = request.args['unit_number']
     log_time_file = request.args['log_time'].replace(":", "-").replace(".","-")
     print("getting if file exists for: {},{},{}".format(unit_type, unit_number, log_time_file))
-    if os.path.exists(Path("/data/out/{}/{}/in_logs_processed/{}.LOG".format(unit_type, unit_number, log_time_file))):
+    if os.path.exists(DATA_FOLDER / ("out/{}/{}/in_logs_processed/{}.LOG".format(unit_type, unit_number, log_time_file))):
         return "", 200
     return "", 404
 
@@ -29,9 +30,9 @@ def post():
     print(request.content_type)
     print(request.__dict__)
     log_name = request.args['log_name']
-    with open(LOG_FOLDER/"{}".format(log_name), 'wb') as the_file:
+    with open(DATA_FOLDER / "in_logs" / "{}".format(log_name), 'wb') as the_file:
         the_file.write(request.data)
     return ""
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
