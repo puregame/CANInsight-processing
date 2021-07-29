@@ -18,6 +18,10 @@ dbc_folder = Path('./data/dbc/')
 def read_files_recursive(files_to_process):
     this_file = files_to_process.pop(0)
     df, meta, continues = read_log_to_df(input_files / this_file)
+    start_time = parser.parse(meta['log_start_time'])
+    log_len_seconds = df.iloc[-1,0]
+    end_time = start_time + timedelta(seconds=log_len_seconds)
+    meta['log_end_time'] = end_time
     
     #todo: following three lines should be function
     unit_output_folder = output_files/meta['unit_type']/meta['unit_number']
@@ -30,24 +34,24 @@ def read_files_recursive(files_to_process):
 
     if continues:
         logging.info("Log file: {} continues to next file".format(this_file))
-        start_time = parser.parse(meta['log_start_time'])
-        first_log_len_seconds = df.iloc[-1,0]
+       
         next_df, next_meta = read_files_recursive(files_to_process)
         next_start_time = parser.parse(next_meta['log_start_time'])
 
         # if second log starts more than 10 seconds after first log, thorw a warning
-        if (start_time + timedelta(seconds=(first_log_len_seconds + 10))) < next_start_time:
+        if (start_time + timedelta(seconds=(log_len_seconds + 10))) < next_start_time:
             logging.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
                             is more than 10 seconds before first entry of {second_time}"\
                             .format(second_time=next_meta['log_start_time'], **meta))
         # if second log starts before end of first log, thorw a warning
-        if (start_time + timedelta(seconds=(first_log_len_seconds))) > next_start_time:
+        if end_time > next_start_time:
             logging.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
                             is more than 1 seconds after first entry of {second_time}"\
                             .format(second_time=next_meta['log_start_time'], **meta))
 
-        next_df['timestamp'] = next_df.timestamp + first_log_len_seconds
+        next_df['timestamp'] = next_df.timestamp + log_len_seconds
         df = df.append(next_df)
+        meta['log_end_time'] = next_meta['log_end_time'] # new end time is end time of next log
     return df, meta
 
 
