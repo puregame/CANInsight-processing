@@ -30,7 +30,8 @@ def post():
     print(request.content_type)
     print(request.__dict__)
     log_name = request.args['log_name']
-    with open(DATA_FOLDER / "in_logs" / "{}".format(log_name), 'wb') as the_file:
+    unit_id = request.args['unit_id']
+    with open(DATA_FOLDER / "in_logs" / "{}_{}".format(unit_id, log_name), 'wb') as the_file:
         the_file.write(request.data)
     return ""
 
