@@ -1,23 +1,35 @@
 import os
 import logging
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dateutil import parser
+import pytz
 from pathlib import Path
+import json
 
 from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 
-logging.basicConfig(filename='./data/can_processing.log', level=logging.DEBUG, #, encoding='utf-8'
+home_folder = Path("Z:")
+
+logging.basicConfig(filename=home_folder/'can_processing.log', level=logging.DEBUG, #, encoding='utf-8'
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-input_files = Path("./data/in_logs/")
-output_files = Path("./data/out/")
-dbc_folder = Path('./data/dbc/')
+
+input_files = home_folder / "in_logs/"
+output_files = home_folder / "out/"
+dbc_folder = home_folder / 'dbc/'
 
 def read_files_recursive(files_to_process):
     this_file = files_to_process.pop(0)
     df, meta, continues = read_log_to_df(input_files / this_file)
+    meta['file_name'] = this_file
+
+    if len(df) == 0:
+        # nothing else to do
+        meta['log_end_time'] = meta['log_start_time']
+        return df, meta
+
     start_time = parser.parse(meta['log_start_time'])
     log_len_seconds = df.iloc[-1,0]
     end_time = start_time + timedelta(seconds=log_len_seconds)
@@ -28,9 +40,14 @@ def read_files_recursive(files_to_process):
     unit_output_folder.mkdir(parents=True, exist_ok=True)
     (unit_output_folder/"in_logs_processed/").mkdir(parents=True, exist_ok=True)
     
-    new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
+    # todo: make log file nameing a function
+    if parser.parse(meta['log_start_time']) < datetime(year=2020, month=2, day=1, hour=1, tzinfo=pytz.UTC):
+        # if the start time is before 2020 then we know the time for this file is not correct!
+        new_file_name = meta['file_name']
+        logging.warning("CAN log {} does not have a proper start timestamp, using log file name for output file".format(new_file_name))
+    else:
+        new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
     os.rename(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name))
-    meta['file_name'] = this_file
 
     if continues:
         logging.info("Log file: {} continues to next file".format(this_file))
@@ -65,7 +82,14 @@ def process_new_files():
         df, meta = read_files_recursive(files_to_process)
         # todo: store meta data in mf4 file!
         mf4 = df_to_mf4(df)
-        new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
+        # mf4.attach(str(meta).encode('utf-8'))
+
+        if parser.parse(meta['log_start_time']) < datetime(year=2020, month=2, day=1, hour=1, tzinfo=pytz.UTC):
+            # if the start time is before 2020 then we know the time for this file is not correct!
+            new_file_name = meta['file_name']
+        else:
+            new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
+
         unit_output_folder = output_files/meta['unit_type']/meta['unit_number']
         unit_output_folder.mkdir(parents=True, exist_ok=True)
         (unit_output_folder/"in_logs_processed/").mkdir(parents=True, exist_ok=True)
