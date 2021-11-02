@@ -1,0 +1,26 @@
+version: '3'
+services:
+  webserver:
+    image: docker-registry.tracksandwheels.com:5050/log_webserver:latest
+    ports:
+      - 5000:5000
+    volumes:
+      - log-processor-data:/data
+  processor:
+    image: docker-registry.tracksandwheels.com:5050/log_processor:latest
+    volumes:
+      - log-processor-data:/data
+
+# if running with external data volume
+#volumes:
+#  log-processor-data:
+#    external: true
+
+# if running with local data volume
+volumes:
+  log-processor-data:
+    driver: local
+    driver_opts:
+       o: bind
+       type: none
+       device: C:\Software\CAN_LOG_Processor\data

@@ -44,7 +44,5 @@
 
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
-	"mounts": ["source=C:\\Software\\can_data,target=/data,type=bind,consistency=cached",
-	"source=V:\\Vault\\Code\\MMC5EV,target=/data/dbc/MMC5EV,type=bind,consistency=cached",
-	"source=V:\\Vault\\Code\\MM1140EV,target=/data/dbc/MM1140EV,type=bind,consistency=cached"]
+	"mounts": ["source=C:\\Software\\can_data,target=/data,type=bind,consistency=cached"]
 }
