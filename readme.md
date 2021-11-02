@@ -24,20 +24,10 @@ To process log files you must first set up the file structure which will store t
 All processed data will be placed in the out folder. Metadata from the log files is used to build sub-folders. Each "unit_type" will have a folder and each "unit_number" will have a folder. Typically "unit_type" will be the vehicle type, for example "Ford-Ranger" or "KUBOTA-M7". The "unit_number" should be a unique identifier for the specific vehicle, such as the last few digits of the VIN or serial number. Ouput files will be built in folders like this: `\out\unit_type\unit_number\`.
 
 ## DBC Folder
-DBC files tell the processor which CAN message IDs contain which phyical values, for more informaiton see [this link](https://www.kvaser.com/developer-blog/an-introduction-j1939-and-dbc-files/) and [this link](https://www.csselectronics.com/screen/page/can-dbc-file-database-intro/language/en). DBC files placed in this folder will be applied to all unit types. To apply a dbc file to a single unit type simply place it in a folder named the desired unit type. For example any DBC files in `\dbc\KUBOTA-M7\` would be applied to any incomming log files with a unit_type of `KUBOTA-M7`.
+DBC files tell the processor which CAN message IDs contain which physical values, for more information see [this link](https://www.kvaser.com/developer-blog/an-introduction-j1939-and-dbc-files/) and [this link](https://www.csselectronics.com/screen/page/can-dbc-file-database-intro/language/en). DBC files placed in this folder will be applied to all unit types. To apply a dbc file to a single unit type simply place it in a folder named the desired unit type. For example any DBC files in `\dbc\KUBOTA-M7\` would be applied to any incomming log files with a unit_type of `KUBOTA-M7`.
 
 # How to Run
-These steps are designed to work on a single PC, more advanced docker commands and settings can be used to run docker containers on a server or point the instance to a different data folder.
-
-1. Download and install Docker.
-2. Create a new folder on your computer where all log files will be stored, any location is acceptable and this can change in the future.
-3. Create a few folders in this top level directory, `in_logs`, `out` and `dbc`.
-4. Build your DBC files, save them in the `dbc` folder.
-5. Record some CAN data, see CAN_EXAMPLE.LOG for an example of the file structure required.
-6. Build the Docker image using the command `docker build -t can/log_processor -f .\Dockerfile .`
-7. Run a new docker container using the command `docker run --mount "type=bind,source=<folder created in step 2>,destination=/data/" -d can/log_processor`
-8. Place files into the `in_log` file and watch them get processed!
-
+See run-docker-compose.md for details on how to run the software in docker
 
 # Roadmap
 - No future improvements currently planned. 

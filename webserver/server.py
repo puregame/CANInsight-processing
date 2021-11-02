@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 app = Flask(__name__)
 
-# DATA_FOLDER = Path("/data/in_logs/")
-DATA_FOLDER = Path("./data/")
+
+DATA_FOLDER = Path("/data/")
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
