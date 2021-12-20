@@ -8,7 +8,7 @@ from pathlib import Path
 import json
 from itertools import repeat
 
-from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
+from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4, mf4_extract_cell_data
 
 home_folder = Path("/data")
 
@@ -48,7 +48,7 @@ def read_files_recursive(files_to_process):
         logging.warning("CAN log {} does not have a proper start timestamp, using log file name for output file".format(new_file_name))
     else:
         new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
-    logging.info("Renaminf file from {} to {}".format(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name)))
+    logging.info("Renaming file from {} to {}".format(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name)))
     os.rename(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name))
 
     if continues:
@@ -102,6 +102,8 @@ def process_new_files():
         all_dbc_files = list(zip(all_dbc_files, repeat(0)))
 
         mf4_extract = mf4.extract_bus_logging({"CAN": all_dbc_files})
+        
+        mf4_extract = mf4_extract_cell_data(mf4_extract)
         mf4_extract.save(unit_output_folder / "extracted-{}.mf4".format(new_file_name))
     logging.debug("*EXPORT COMPELTE*")
 

@@ -7,6 +7,8 @@ import os
 import logging
 import json
 
+import logging
+
 # Constants for can signal conversion
 
 # ASAMMDF CAN signal dtypes
@@ -144,3 +146,39 @@ def tail(path, lines=20):
         block_number -= 1
     all_read_text = b''.join(reversed(blocks))
     return b'\n'.join(all_read_text.splitlines()[-total_lines_wanted:])
+
+def mf4_extract_cell_data(mf4):
+    logging.info("Starting Cell info extraction")
+    cell_df = None
+    for s in mf4.iter_groups():
+        if "Cell_ID" in s:
+            cell_df = s
+    
+    if cell_df is None:
+        return mf4
+    else:
+        logging.info("Cell ID exists for this log, parsing cell data")
+    
+    voltage_instant_signals = []
+    voltage_open_signals = []
+    resistance_signals = []
+    # for now: assume 32 cells (0..31)
+    for i in range(31):
+        data = cell_df[cell_df['Cell_ID'] == i]['InstantVoltage']
+        voltage_instant_signals.append(Signal(samples=data.iloc[:].values,
+                                timestamps=data.index.tolist(),
+                                name="Cell {} Instant Voltage".format(i)))
+
+        data = cell_df[cell_df['Cell_ID'] == i]['Resistance']
+        resistance_signals.append(Signal(samples=data.iloc[:].values,
+                                timestamps=data.index.tolist(),
+                                name="Cell {} Resistance".format(i)))
+
+        data = cell_df[cell_df['Cell_ID'] == i]['OpenVoltage']
+        voltage_open_signals.append(Signal(samples=data.iloc[:].values,
+                                timestamps=data.index.tolist(),
+                                name="Cell {} Open Voltage".format(i)))
+    mf4.append(voltage_instant_signals, comment="Battery Cell Instant Voltages")
+    mf4.append(voltage_open_signals, comment="Battery Cell Open Voltages")
+    mf4.append(resistance_signals, comment="Battery Cell Resistances")
+    return mf4
