@@ -1,3 +1,6 @@
 pandas
 numpy
 asammdf
+psycopg2
+sqlalchemy
+alembic

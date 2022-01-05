@@ -5,6 +5,6 @@ COPY requirements.txt /tmp/pip-tmp/
 RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
     && rm -rf /tmp/pip-tmp
 
-COPY .. /processor_app
-WORKDIR /processor_app
+COPY src/* /app
+WORKDIR /app
 CMD python log_converter.py
