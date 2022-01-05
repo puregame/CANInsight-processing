@@ -10,6 +10,27 @@ services:
     image: docker-registry.tracksandwheels.com:5050/log_processor:latest
     volumes:
       - log-processor-data:/data
+  database:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/posrgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
 
 # if running with external data volume
 #volumes:
@@ -24,3 +45,7 @@ volumes:
        o: bind
        type: none
        device: C:\Software\CAN_LOG_Processor\data
+  pgadmin_data:
+    driver: local
+  postgres_data:
+    driver: local
