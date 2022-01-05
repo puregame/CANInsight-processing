@@ -2,6 +2,9 @@ from flask import Flask, request
 import json
 import os
 from pathlib import Path
+
+from config import *
+
 app = Flask(__name__)
 
 

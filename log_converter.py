@@ -1,3 +1,5 @@
+from database import *
+
 import os
 import logging
 import time

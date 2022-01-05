@@ -10,10 +10,10 @@
 
 ## Build Images
 1. CD into project directory.
-2. Build the images
+2. Build the images (may need sudo)
 ```
-docker build -t docker-registry.tracksandwheels.com:5050/log_processor:latest .\processor\
-docker build -t docker-registry.tracksandwheels.com:5050/log_webserver:latest .\webserver\
+docker build -t docker-registry.tracksandwheels.com:5050/log_processor:latest processor
+docker build -t docker-registry.tracksandwheels.com:5050/log_webserver:latest webserver
 ```
 3. Tag images if versions are required
 ```
