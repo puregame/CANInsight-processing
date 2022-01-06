@@ -20,13 +20,14 @@ def get_vehicle_by_unit_number(unit_number):
     s = Session()
     return s.query(Vehicle).filter(Vehicle.unit_number==unit_number).first()
 
-def new_log_file(start_time, upload_time, unit_number, length=None, samples=None):
+def new_log_file(start_time, unit_number, status="Uploaded", upload_time=datetime.now(), length=None, samples=None):
     s = Session()
     log = LogFile(start_time=start_time, 
                      upload_time=upload_time, 
                      unit_number=unit_number, 
                      length=length,
-                     samples=samples)
+                     samples=samples,
+                     processing_status=status)
     s.add(log)
     s.commit()
     log_id = log.id
@@ -37,4 +38,8 @@ def new_log_file(start_time, upload_time, unit_number, length=None, samples=None
 def get_log_file(start_time, unit_number):
     s = Session()
     return s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
+
+def delete_log_file(start_time, unit_number):
+    s = Session()
+    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
 

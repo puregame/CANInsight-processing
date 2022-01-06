@@ -1,4 +1,4 @@
-from database.crud import get_vehicle_by_unit_number, new_vehicle
+from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle
 from flask import Flask, request
 import json
 import logging
@@ -13,7 +13,6 @@ from database.crud import *
 
 
 app = Flask(__name__)
-# logging.basicConfig(, level=logging.DEBUG)
 init_and_upgrade_db()
 
 @app.route('/')
@@ -57,6 +56,7 @@ def post():
             the_file.write(request.data)
     else:
         return "", 409
+    new_log_file(log_start_time, unit_number)
     return "", 200
 
 if __name__ == '__main__':

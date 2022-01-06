@@ -14,6 +14,7 @@ from itertools import repeat
 from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 
 from config import DATA_FOLDER
+from database.crud import *
 
 formatter = logging.Formatter(
     "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s: %(message)s")
@@ -60,7 +61,7 @@ def read_files_recursive(files_to_process):
         logger.warning("CAN log {} does not have a proper start timestamp, using log file name for output file".format(new_file_name))
     else:
         new_file_name = "{}".format(meta['log_start_time'].replace(":", "-").replace(".","-"))
-    logger.info("Renaminf file from {} to {}".format(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name)))
+    logger.info("Renaming file from {} to {}".format(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name)))
     os.rename(input_files/this_file, unit_output_folder/"in_logs_processed"/"{}.log".format(new_file_name))
 
     if continues:
@@ -74,6 +75,7 @@ def read_files_recursive(files_to_process):
             logger.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
                             is more than 10 seconds before first entry of {second_time}"\
                             .format(second_time=next_meta['log_start_time'], **meta))
+
         # if second log starts before end of first log, thorw a warning
         if end_time > next_start_time:
             logger.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
@@ -89,7 +91,7 @@ def read_files_recursive(files_to_process):
 def process_new_files():
     logger.debug("Looking for new CAN Log files to process")
     files_to_process = [k for k in os.listdir(input_files) if ('.log' in k) or ('.LOG' in k)]
-    logger.debug("input data files: {}".format(files_to_process))
+    logger.debug("Data files: {}".format(files_to_process))
 
     global_dbc_files = list(get_dbc_file_list(dbc_folder))
     while len(files_to_process) > 0:
