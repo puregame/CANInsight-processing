@@ -35,6 +35,12 @@ def new_log_file(start_time, unit_number, status="Uploaded", upload_time=datetim
     s.close()
     return log_id
 
+def update_log_file_status(start_time, unit_number, processing_status):
+    s = Session()
+    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).update({"processing_status": processing_status})
+    s.commit()
+    s.close()
+
 def get_log_file(start_time, unit_number):
     s = Session()
     return s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
@@ -42,4 +48,5 @@ def get_log_file(start_time, unit_number):
 def delete_log_file(start_time, unit_number):
     s = Session()
     s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
+    s.close()
 
