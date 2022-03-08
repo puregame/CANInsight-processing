@@ -1,8 +1,6 @@
 from database import *
 
 import os
-import logging
-from logging.handlers import RotatingFileHandler
 import time
 from datetime import datetime, timedelta
 from dateutil import parser
@@ -16,14 +14,7 @@ from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 from config import DATA_FOLDER
 from database.crud import *
 
-formatter = logging.Formatter(
-    "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s: %(message)s")
-logger = logging.getLogger('log_converter')
-logger.setLevel(logging.DEBUG)
-handler = RotatingFileHandler(DATA_FOLDER/'can_processing.log', maxBytes=1000000, backupCount=5)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
+from log_logger import logger
 
 input_files = DATA_FOLDER / "in_logs/"
 input_files.mkdir(exist_ok=True)
@@ -48,6 +39,7 @@ def get_new_log_filename(log_start_time, file_name):
 
 def read_files_recursive(files_to_process):
     this_file = files_to_process.pop(0)
+    logger.info("Starting processing for file name: {}".format(this_file))
     df, meta, continues = read_log_to_df(input_files / this_file)
     meta['unit_output_folder'] = output_files/meta['unit_type']/meta['unit_number']
     create_unit_folders(meta['unit_output_folder'])
@@ -123,5 +115,6 @@ def process_new_files():
     logger.info("*EXPORT COMPELTE*")
 
 while(True):
+    print("Processing new files")
     process_new_files()
-    time.sleep(10)
+    time.sleep(120)

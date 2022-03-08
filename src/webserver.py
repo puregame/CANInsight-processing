@@ -1,16 +1,12 @@
 from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle
 from flask import Flask, request
-import json
-import logging
-from logging.handlers import RotatingFileHandler
+from log_logger import handler
 import os
 from pathlib import Path
 
 from config import DATA_FOLDER
 from database.upgrade import init_and_upgrade_db
 from database.crud import *
-
-
 
 app = Flask(__name__)
 init_and_upgrade_db()
@@ -21,7 +17,7 @@ def hello_world():
 
 @app.route('/data_file/', methods=['GET'])
 def check_for_file():
-    app.logger.error("got request for getting data file status")
+    app.logger.debug("got request for getting data file status")
     unit_type = request.args['unit_type']
     unit_number = request.args['unit_number']
     if not get_vehicle_by_unit_number(unit_number):
@@ -60,10 +56,5 @@ def post():
     return "", 200
 
 if __name__ == '__main__':
-    formatter = logging.Formatter(
-        "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s: %(message)s")
-    handler = RotatingFileHandler(filename=DATA_FOLDER/'webserver.log', maxBytes=1000000, backupCount=5)
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(formatter)
     app.logger.addHandler(handler)
     app.run(debug=True, host="0.0.0.0")

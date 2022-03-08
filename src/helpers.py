@@ -4,8 +4,9 @@ from asammdf.blocks.source_utils import Source
 import asammdf.blocks.v4_constants as v4c
 import pandas as pd
 import os
-import logging
 import json
+
+from log_logger import logger
 
 # Constants for can signal conversion
 
@@ -39,20 +40,45 @@ def get_dbc_file_list(folder):
         return map(lambda x: folder/x, filter(lambda x: x[-4:]==".dbc", files))
     return []
 
+hex_to_int = lambda x: int(str(x), 16)
+
+def is_val_hex(val):
+    try:
+        int(str(val), 16)
+        return True
+    except ValueError:
+        return False
+
+def is_val_float(val):
+    try:
+        float(val)
+        return True
+    except ValueError:
+        return False
+
 def read_log_to_df(file):
-    logging.debug("Reading file {} to dataframe".format(file))
+    logger.debug("Reading file {} to dataframe".format(file))
     f = open(file, 'r')
     meta = json.loads(f.readline())
+    logger.debug("\tloaded json files")
     continues = False
 
-    df = pd.read_csv(f, na_values='00',
-                        dtype={'CAN_ID': str, 'Data0': str,'Data1': str,'Data2': str,'Data3': str,'Data4': str,'Data5': str,'Data6': str,'Data7': str})
+    df = pd.read_csv(f,
+                        dtype={'CAN_ID': str, 'Data0': str,'Data1': str,'Data2': str,'Data3': str,'Data4': str,'Data5': str,'Data6': str,'Data7': str},
+                        on_bad_lines='skip')
     df = df.fillna(value='00')
+    
+    
+    df.drop(df.index[df['timestamp']==0.0], inplace=True) # drop all rows where timestamp is zero
+    df.drop(df.index[df['timestamp'].apply(is_val_float) == False], inplace=True) # drop all where timestamp is not float 
+    df['timestamp'] = df['timestamp'].astype(np.float64)
+
+    logger.debug("\tread data to dataframe")
 
     # if timestamps are not floats, then this file probably has continuation
     if df['timestamp'].dtype != np.float64 and len(df) > 0:
         if df.iloc[-1, 0] == "---- EOF NEXT FILE TO FOLLOW ----":
-            logging.debug("this file has eof, combining with next file")
+            logger.debug("this file has eof, combining with next file")
             continues = True
             # remove last row and convert timestamps to float64
             df.drop(df.tail(1).index,inplace=True) # drop last row
@@ -60,9 +86,11 @@ def read_log_to_df(file):
         else:
             raise Exception("Timestamps are not floats and last row is not EOF string!")
 
-    logging.debug('converting all columns into integer values')
+    for column in ['CAN_BUS', 'CAN_EXT', 'CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
+        df.drop(df.index[df[column].apply(is_val_hex) == False], inplace=True)
+
+    logger.debug('\tconverting all columns into integer values')
     # converting all columns into integer values
-    hex_to_int = lambda x: int(str(x), 16)
     df['CAN_ID']=df.CAN_ID.apply(hex_to_int)
     df['Data0']=df.Data0.apply(hex_to_int)
     df['Data1']=df.Data1.apply(hex_to_int)
@@ -72,7 +100,7 @@ def read_log_to_df(file):
     df['Data5']=df.Data5.apply(hex_to_int)
     df['Data6']=df.Data6.apply(hex_to_int)
     df['Data7']=df.Data7.apply(hex_to_int)
-    logging.debug('conversion complete')
+    logger.debug('\tconversion complete')
     return df, meta, continues
 
 

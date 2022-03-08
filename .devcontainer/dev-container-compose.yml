@@ -15,7 +15,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ..:/workspace:cached  
+      - ..:/workspace:cached
       - V:\Software\CAN_data:/data:cached
 
     # Overrides default command so things don't shut down after the process ends.

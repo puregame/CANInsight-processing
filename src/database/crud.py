@@ -18,7 +18,9 @@ def new_vehicle(unit_number, vehicle_type, serial_number=None, status=None):
 
 def get_vehicle_by_unit_number(unit_number):
     s = Session()
-    return s.query(Vehicle).filter(Vehicle.unit_number==unit_number).first()
+    q = s.query(Vehicle).filter(Vehicle.unit_number==unit_number).first()
+    s.close()
+    return q
 
 def new_log_file(start_time, unit_number, status="Uploaded", upload_time=datetime.now(), length=None, samples=None):
     s = Session()
@@ -43,7 +45,9 @@ def update_log_file_status(start_time, unit_number, processing_status):
 
 def get_log_file(start_time, unit_number):
     s = Session()
-    return s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
+    s.close()
+    return q
 
 def delete_log_file(start_time, unit_number):
     s = Session()
