@@ -91,6 +91,7 @@ def read_files_recursive(files_to_process):
 def process_new_files():
     logger.debug("Looking for new CAN Log files to process")
     files_to_process = [k for k in os.listdir(input_files) if ('.log' in k) or ('.LOG' in k)]
+    files_to_process.sort()
     logger.debug("Data files: {}".format(files_to_process))
 
     global_dbc_files = list(get_dbc_file_list(dbc_folder))

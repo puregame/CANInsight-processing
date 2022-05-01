@@ -6,10 +6,16 @@ services:
       - 5000:5000
     volumes:
       - log-processor-data:/data
+    environment:
+      DB_USER: root # change this for your setup
+      DB_PASSWORD: root # Chagne this for your setup
   processor:
     image: docker-registry.tracksandwheels.com:5050/log_processor:latest
     volumes:
       - log-processor-data:/data
+    environment:
+      DB_USER: root
+      DB_PASSWORD: root
   database:
     image: postgres
     restart: always
