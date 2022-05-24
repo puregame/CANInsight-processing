@@ -13,9 +13,9 @@ database_url_params = {'username': 'root',
 for k in database_url_params:
     try:
         environ_key = "DB_{}".format(k.upper())
-        database_url_params[k] = os.environ(environ_key)
+        database_url_params[k] = os.environ[environ_key]
     except KeyError:
         # ignore environment variable key not found errors
         pass
 
-DATABASE_CONFIG = {'sqlalchemy.url': 'postgresql://{username}:{password}@{hostname}:{port}/{database}'.format(database_url_params)
+DATABASE_CONFIG = {'sqlalchemy.url': 'postgresql://{username}:{password}@{hostname}:{port}/{database}'.format(**database_url_params)}

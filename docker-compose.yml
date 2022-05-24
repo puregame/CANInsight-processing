@@ -9,6 +9,9 @@ services:
     environment:
       DB_USER: root # change this for your setup
       DB_PASSWORD: root # Chagne this for your setup
+      DB_port: 5432 # default
+      DB_HOSTNAME: database # default
+      DB_DATABASE: logserver_db # default
   processor:
     image: docker-registry.tracksandwheels.com:5050/log_processor:latest
     volumes:
@@ -16,6 +19,8 @@ services:
     environment:
       DB_USER: root
       DB_PASSWORD: root
+
+# if using local database
   database:
     image: postgres
     restart: always
@@ -50,7 +55,7 @@ volumes:
     driver_opts:
        o: bind
        type: none
-       device: C:\Software\CAN_LOG_Processor\data
+       device: /home/pi/software/can-projects/can-data
   pgadmin_data:
     driver: local
   postgres_data:
