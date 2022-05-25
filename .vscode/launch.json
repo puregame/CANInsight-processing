@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "unittest",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/src",
+            "envFile": "${workspaceFolder}/src/localtest.env",
+        },
+        {
             "name": "Python: Log Converter",
             "type": "python",
             "request": "launch",
@@ -12,7 +21,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}/src",
-            "envFile": "${workspaceFolder}/localdev.env",
+            "envFile": "${workspaceFolder}/src/localdev.env",
         },
         {
             "name": "Python: Webserver",
@@ -22,7 +31,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}/src",
-            "envFile": "${workspaceFolder}/localdev.env",
+            "envFile": "${workspaceFolder}/src/localdev.env",
         }
     ]
 }

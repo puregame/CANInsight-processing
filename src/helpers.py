@@ -56,18 +56,13 @@ def is_val_float(val):
     except ValueError:
         return False
 
-def read_log_to_df(file):
-    logger.debug("Reading file {} to dataframe".format(file))
-    f = open(file, 'r')
-    meta = json.loads(f.readline())
-    logger.debug("\tloaded json files")
+def read_csv_file(f):
     continues = False
-
     df = pd.read_csv(f,
                         dtype={'CAN_ID': str, 'Data0': str,'Data1': str,'Data2': str,'Data3': str,'Data4': str,'Data5': str,'Data6': str,'Data7': str},
                         on_bad_lines='skip')
+    f.close()
     df = df.fillna(value='00')
-    
     
     df.drop(df.index[df['timestamp']==0.0], inplace=True) # drop all rows where timestamp is zero
     df.drop(df.index[df['timestamp'].apply(is_val_float) == False], inplace=True) # drop all where timestamp is not float 
@@ -101,8 +96,25 @@ def read_log_to_df(file):
     df['Data6']=df.Data6.apply(hex_to_int)
     df['Data7']=df.Data7.apply(hex_to_int)
     logger.debug('\tconversion complete')
-    return df, meta, continues
+    return df, continues
 
+def read_dat_file(f):
+    raise NotImplementedError()
+
+def read_log_to_df(file):
+    logger.debug("Reading file {} to dataframe".format(file))
+    f = open(file, 'r')
+    meta = json.loads(f.readline())
+    logger.debug("\tloaded json files")
+    if "log_type" in meta:
+        if meta["log_type"][:3] == "CSV":
+            df, continues = read_csv_file(f)
+        if meta["log_type"][:3] == "DAT":
+            df, continues = read_dat_file(f)
+    else:
+        df, continues = read_csv_file(f)
+
+    return df, meta, continues
 
 def df_to_mf4(df):
     row_count=df.shape[0]

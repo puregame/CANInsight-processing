@@ -28,7 +28,7 @@ def create_unit_folders(unit_output_folder):
     (unit_output_folder/"in_logs_processed/").mkdir(parents=True, exist_ok=True)
 
 def get_new_log_filename(log_start_time, file_name):
-    # get new file name for this log MAKE THIS A FUNCTION
+    # get new file name for this log
     if parser.parse(log_start_time) < datetime(year=2020, month=2, day=1, hour=1, tzinfo=pytz.UTC):
         # if the start time is before 2020 then we know the time for this file is not correct!
         new_file_name = file_name
@@ -115,7 +115,8 @@ def process_new_files():
             update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
     logger.info("*EXPORT COMPELTE*")
 
-while(True):
-    print("Processing new files")
-    process_new_files()
-    time.sleep(120)
+if __name__ == "__main__":
+    while(True):
+        print("Processing new files")
+        process_new_files()
+        time.sleep(120)
