@@ -98,7 +98,25 @@ def read_csv_file(f):
     logger.debug('\tconversion complete')
     return df, continues
 
+def split_string_every_n_chars(s, n=2):
+    return [s[i:i+n] for i in range(0, len(s), n)]
+
+def dat_line_to_data(s):
+    data = {}
+    data['timestamp'] = line[:line.find("-")]
+    data['line'] = line[line.find("-")+1:]
+    data['can_bus'] = line[0]
+    data['can_id'] = line[line.find("-")+1:line.find("#")]
+    data['data_str'] = line[line.find("#")+1:]
+    data['data'] = split_string_every_n_chars(data_str, 2)
+    data['can_len'] = len(data_str)/2
+    return data
+
 def read_dat_file(f):
+    continues = False
+
+    # MSC Code useful for conversion
+
     raise NotImplementedError()
 
 def read_log_to_df(file):

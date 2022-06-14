@@ -102,7 +102,6 @@ class LogConverterTestCase(TestCase):
                                                         "Data6": 38,
                                                         "Data7": 22}, dtype=float64)))
 
-
     def test_Read_log_to_df_dat(self):
         """ test reading basic DAT file """
         df, meta, continues = read_log_to_df("tests/test_data/test_data_dat.log")
