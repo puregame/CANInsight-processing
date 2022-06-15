@@ -101,23 +101,52 @@ def read_csv_file(f):
 def split_string_every_n_chars(s, n=2):
     return [s[i:i+n] for i in range(0, len(s), n)]
 
-def dat_line_to_data(s):
+def dat_line_to_data(line):
     data = {}
-    data['timestamp'] = line[:line.find("-")]
-    data['line'] = line[line.find("-")+1:]
-    data['can_bus'] = line[0]
-    data['can_id'] = line[line.find("-")+1:line.find("#")]
-    data['data_str'] = line[line.find("#")+1:]
-    data['data'] = split_string_every_n_chars(data_str, 2)
-    data['can_len'] = len(data_str)/2
+    data['timestamp'] = np.float64(line[:line.find("-")])
+    line = line[line.find("-")+1:]
+    data['CAN_BUS'] = np.float64(int(line[0]))
+    data['CAN_ID'] = line[line.find("-")+1:line.find("#")]
+    data["CAN_EXT"] = np.float64(int((len(data['CAN_ID']) > 3)))
+    data_str = line[line.find("#")+1:-1]
+    can_message = split_string_every_n_chars(data_str, 2)
+    data['CAN_LEN'] = len(data_str)/2
+    can_message += ['00'] * (8 - len(can_message))
+    data["Data0"] = can_message[0]
+    data["Data1"] = can_message[1]
+    data["Data2"] = can_message[2]
+    data["Data3"] = can_message[3]
+    data["Data4"] = can_message[4]
+    data["Data5"] = can_message[5]
+    data["Data6"] = can_message[6]
+    data["Data7"] = can_message[7]
     return data
 
 def read_dat_file(f):
     continues = False
-
-    # MSC Code useful for conversion
-
-    raise NotImplementedError()
+    header = f.readline()
+    df = pd.DataFrame(columns=["timestamp", "CAN_BUS", "CAN_EXT", "CAN_ID", "CAN_LEN", "Data0", "Data1", "Data2", "Data3", "Data4", "Data5", "Data6", "Data7"])
+    for line in f:
+        if line == "---- EOF NEXT FILE TO FOLLOW ----":
+            continues = True
+            break
+        can_frame = dat_line_to_data(line)
+        # print(can_frame)
+        new_line = pd.DataFrame(can_frame, index=[0])
+        df = pd.concat([df, new_line], ignore_index=True)
+    
+    logger.debug('\tconverting all columns into integer values')
+    # converting all columns into integer values
+    df['CAN_ID']=df.CAN_ID.apply(hex_to_int)
+    df['Data0']=df.Data0.apply(hex_to_int)
+    df['Data1']=df.Data1.apply(hex_to_int)
+    df['Data2']=df.Data2.apply(hex_to_int)
+    df['Data3']=df.Data3.apply(hex_to_int)
+    df['Data4']=df.Data4.apply(hex_to_int)
+    df['Data5']=df.Data5.apply(hex_to_int)
+    df['Data6']=df.Data6.apply(hex_to_int)
+    df['Data7']=df.Data7.apply(hex_to_int)
+    return df, continues
 
 def read_log_to_df(file):
     logger.debug("Reading file {} to dataframe".format(file))
@@ -131,7 +160,8 @@ def read_log_to_df(file):
             df, continues = read_dat_file(f)
     else:
         df, continues = read_csv_file(f)
-
+    
+    print(df)
     return df, meta, continues
 
 def df_to_mf4(df):
