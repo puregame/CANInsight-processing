@@ -81,6 +81,7 @@ def read_csv_file(f):
         else:
             raise Exception("Timestamps are not floats and last row is not EOF string!")
 
+    # for all columns that will be interpreted as hex, drop any values that are not hexadecimal
     for column in ['CAN_BUS', 'CAN_EXT', 'CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
         df.drop(df.index[df[column].apply(is_val_hex) == False], inplace=True)
 
@@ -125,16 +126,31 @@ def dat_line_to_data(line):
 def read_dat_file(f):
     continues = False
     header = f.readline()
-    df = pd.DataFrame(columns=["timestamp", "CAN_BUS", "CAN_EXT", "CAN_ID", "CAN_LEN", "Data0", "Data1", "Data2", "Data3", "Data4", "Data5", "Data6", "Data7"])
+    # df = pd.DataFrame(columns=["timestamp", "CAN_BUS", "CAN_EXT", "CAN_ID", "CAN_LEN", "Data0", "Data1", "Data2", "Data3", "Data4", "Data5", "Data6", "Data7"],
+    #                   dtypes= {'timestamp': np.float64, 'CAN_BUS': np.int8,'CAN_EXT': np.int8, 'CAN_LEN': np.int8})
+    
+    df = pd.DataFrame({'timestamp': pd.Series(dtype=np.float64),
+                       'CAN_BUS': pd.Series(dtype=np.int8,),
+                       'CAN_EXT': pd.Series(dtype=np.int8),
+                       'CAN_ID': pd.Series(dtype=str),
+                       'CAN_LEN': pd.Series(dtype=np.int8),
+                       'Data0': pd.Series(dtype=str), 
+                       'Data1': pd.Series(dtype=str), 
+                       'Data2': pd.Series(dtype=str), 
+                       'Data3': pd.Series(dtype=str), 
+                       'Data4': pd.Series(dtype=str), 
+                       'Data5': pd.Series(dtype=str), 
+                       'Data6': pd.Series(dtype=str), 
+                       'Data7': pd.Series(dtype=str)})
+    
     for line in f:
         if line == "---- EOF NEXT FILE TO FOLLOW ----":
             continues = True
             break
         can_frame = dat_line_to_data(line)
-        # print(can_frame)
         new_line = pd.DataFrame(can_frame, index=[0])
         df = pd.concat([df, new_line], ignore_index=True)
-    
+
     logger.debug('\tconverting all columns into integer values')
     # converting all columns into integer values
     df['CAN_ID']=df.CAN_ID.apply(hex_to_int)
@@ -160,8 +176,7 @@ def read_log_to_df(file):
             df, continues = read_dat_file(f)
     else:
         df, continues = read_csv_file(f)
-    
-    print(df)
+
     return df, meta, continues
 
 def df_to_mf4(df):
