@@ -111,6 +111,8 @@ class LogConverterTestCase(TestCase):
         self.assertEqual(meta['log_start_time'], "2022-05-23T17:12:22.597Z")
         self.assertEqual(meta['log_type'], "DAT0.1")
         self.assertEqual(len(df), 10)
+
+
         self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 8.543,
                                                         "CAN_BUS": 1, 
                                                         "CAN_EXT": 1,
@@ -123,12 +125,12 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 0xD3, 
                                                         "Data5": 0x34,
                                                         "Data6": 0,
-                                                        "Data7": 0}, dtype=float64)))
+                                                        "Data7": 0})))
         self.assertTrue(df.iloc[9].equals(Series(data={"timestamp": 8.548,
                                                         "CAN_BUS": 1,
                                                         "CAN_EXT": 1, 
                                                         "CAN_ID": 0x72C0BCE, 
-                                                        "CAN_LEN": 8, 
+                                                        "CAN_LEN": 5, 
                                                         "Data0": 0xD2,
                                                         "Data1": 0x3A, 
                                                         "Data2": 0x26, 
@@ -136,7 +138,7 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 0x61,
                                                         "Data5": 0,
                                                         "Data6": 0,
-                                                        "Data7": 0}, dtype=float64)))
+                                                        "Data7": 0})))
         
     def tearDown(self):
         """ Remove all testing airports from the db. """
