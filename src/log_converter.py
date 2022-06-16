@@ -9,7 +9,7 @@ from pathlib import Path
 import json
 from itertools import repeat
 
-from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4, get_log_duration
+from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 
 from config import DATA_FOLDER
 from database.crud import *
@@ -55,13 +55,13 @@ def read_files_recursive(files_to_process):
     # os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
 
     # if there is no log data then skip remaining processing
-    if meta['len'] == 0:
-        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Zero Data")   
+    if meta['len'] == 0:  
         meta['log_end_time'] = meta['log_start_time']
         return df, meta
 
     start_time = parser.parse(meta['log_start_time'])
     log_len_seconds = df.iloc[-1,0]
+    meta['log_len_seconds'] = log_len_seconds
     end_time = start_time + timedelta(seconds=log_len_seconds)
     meta['log_end_time'] = end_time
 
@@ -98,25 +98,30 @@ def process_new_files():
     global_dbc_files = list(get_dbc_file_list(dbc_folder))
     while len(files_to_process) > 0:
         df, meta = read_files_recursive(files_to_process)
-        if meta['len'] > 0:
-            duration = get_log_duration(df)
-            update_log_file_len(meta['log_start_time'], meta['unit_number'], duration, len(df))
-            # update_log_file_size_time(meta['log_start_time'], mea)
-            # if length is not zero then process the file
-            # todo: store meta data in mf4 file!
-            mf4 = df_to_mf4(df)
-            # mf4.attach(str(meta).encode('utf-8'))
+        if is_log_status(meta['log_start_time'], meta['unit_number'], "Uploading"):
+            # do nothing, log is still uploading and should not be processed
+            continue
+        if meta['len'] == 0:
+            update_log_file_len(meta['log_start_time'], meta['unit_number'], 0, 0)
+            update_log_file_status(meta['log_start_time'], meta['unit_number'], "Zero Data") 
+            continue # do not process logs that have zero length
+        
+        update_log_file_len(meta['log_start_time'], meta['unit_number'], meta['log_len_seconds'], len(df))
+        
+        # todo: store meta data in mf4 file!
+        mf4 = df_to_mf4(df)
+        # mf4.attach(str(meta).encode('utf-8'))
 
-            new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
-            mf4.save(meta['unit_output_folder'] / "raw-{}.mf4".format(new_file_name))
-            update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
-            unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
-            all_dbc_files = unit_type_dbc_files+global_dbc_files
-            all_dbc_files = list(zip(all_dbc_files, repeat(0)))
+        new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
+        mf4.save(meta['unit_output_folder'] / "raw-{}.mf4".format(new_file_name))
+        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
+        unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
+        all_dbc_files = unit_type_dbc_files+global_dbc_files
+        all_dbc_files = list(zip(all_dbc_files, repeat(0)))
 
-            mf4_extract = mf4.extract_bus_logging({"CAN": all_dbc_files})
-            mf4_extract.save(meta['unit_output_folder'] / "extracted-{}.mf4".format(new_file_name))
-            update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
+        mf4_extract = mf4.extract_bus_logging({"CAN": all_dbc_files})
+        mf4_extract.save(meta['unit_output_folder'] / "extracted-{}.mf4".format(new_file_name))
+        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
     logger.info("*EXPORT COMPELTE*")
 
 if __name__ == "__main__":

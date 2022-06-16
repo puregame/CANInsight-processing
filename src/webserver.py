@@ -43,6 +43,9 @@ def post():
     # if log file exists return 409 (conflict) do not save file
     if get_log_file(log_start_time, unit_number):
         return "", 409
+    
+    # create the log file and mark it as "uploading"
+    new_log_file(log_start_time, unit_number, status="Uploading")
 
     initial_upload_name = DATA_FOLDER / "in_logs" / "{}_{}".format(unit_number, log_name)
 
@@ -52,7 +55,8 @@ def post():
             the_file.write(request.data)
     else:
         return "", 409
-    new_log_file(log_start_time, unit_number)
+    # change log file status to "uploaded"
+    update_log_file_status(log_start_time, unit_number, "Uploaded")
     return "", 200
 
 if __name__ == '__main__':
