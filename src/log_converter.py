@@ -51,8 +51,8 @@ def read_files_recursive(files_to_process):
     create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'])
     # Move input log file to storage folder
     update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
-    # logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
-    # os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
+    logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
+    os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
 
     # if there is no log data then skip remaining processing
     if meta['len'] == 0:  
