@@ -48,6 +48,7 @@ def read_files_recursive(files_to_process):
 
     new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
 
+    create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'])
     # Move input log file to storage folder
     update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
     logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))

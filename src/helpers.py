@@ -102,16 +102,16 @@ def read_csv_file(f):
 def split_string_every_n_chars(s, n=2):
     return [s[i:i+n] for i in range(0, len(s), n)]
 
-def dat_line_to_data(line):
+def dat_line_to_data(line:str):
     data = {}
     data['timestamp'] = np.float64(line[:line.find("-")])
     line = line[line.find("-")+1:]
     data['CAN_BUS'] = np.float64(int(line[0]))
     data['CAN_ID'] = line[line.find("-")+1:line.find("#")]
     data["CAN_EXT"] = np.float64(int((len(data['CAN_ID']) > 3)))
-    data_str = line[line.find("#")+1:-1]
+    data_str = line[line.find("#")+1:]
     can_message = split_string_every_n_chars(data_str, 2)
-    data['CAN_LEN'] = len(data_str)/2
+    data['CAN_LEN'] = len(can_message)
     can_message += ['00'] * (8 - len(can_message))
     data["Data0"] = can_message[0]
     data["Data1"] = can_message[1]
@@ -142,14 +142,20 @@ def read_dat_file(f):
                        'Data5': pd.Series(dtype=str), 
                        'Data6': pd.Series(dtype=str), 
                        'Data7': pd.Series(dtype=str)})
-    
+    can_frames = []
+    logger.debug("\t\tStarting looping through lines")
+    i = 0
     for line in f:
+        line = line.replace("\n", "")
         if line == "---- EOF NEXT FILE TO FOLLOW ----":
             continues = True
             break
-        can_frame = dat_line_to_data(line)
-        new_line = pd.DataFrame(can_frame, index=[0])
-        df = pd.concat([df, new_line], ignore_index=True)
+        can_frames.append(dat_line_to_data(line))
+        i+=1
+        if (i % 1000000) == 1:
+            logger.debug("\t\t\tDone {} lines".format(i))
+    logger.debug("\t\tDone looping through lines")
+    df = pd.concat([df, pd.DataFrame(can_frames)], ignore_index=True)
 
     logger.debug('\tconverting all columns into integer values')
     # converting all columns into integer values
@@ -168,13 +174,16 @@ def read_log_to_df(file):
     logger.debug("Reading file {} to dataframe".format(file))
     f = open(file, 'r')
     meta = json.loads(f.readline())
-    logger.debug("\tloaded json files")
+    logger.debug("\tloaded metadata from file")
     if "log_type" in meta:
         if meta["log_type"][:3] == "CSV":
+            logger.debug("\tProcessing file as CSV")
             df, continues = read_csv_file(f)
         if meta["log_type"][:3] == "DAT":
+            logger.debug("\tProcessing file as DAT")
             df, continues = read_dat_file(f)
     else:
+        logger.debug("\tNo log_type, processing file as CSV")
         df, continues = read_csv_file(f)
 
     return df, meta, continues
