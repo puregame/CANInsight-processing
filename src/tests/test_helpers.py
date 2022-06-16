@@ -18,7 +18,7 @@ class LogConverterTestCase(TestCase):
         pass
     
     def test_read_log_with_continuation(self):
-        pass
+        raise NotImplementedError
 
     def test_read_log_with_bad_timestamp(self):
         """ test reading basic CSV with bad timestamp, lines should be ignored"""
@@ -32,6 +32,9 @@ class LogConverterTestCase(TestCase):
         self.assertEqual(len(df), 6)
         self.assertIn("log_type", meta)
         self.assertEqual(meta['log_type'], "CSV0.1")
+
+    def test_read_csv_no_type(self):
+        raise NotImplementedError
 
     def test_read_log_to_df_good_csv(self):
         """ test reading basic CSV style log file with no log type in meta """
@@ -139,7 +142,24 @@ class LogConverterTestCase(TestCase):
                                                         "Data5": 0,
                                                         "Data6": 0,
                                                         "Data7": 0})))
-        
+
+    def test_dat_line_to_data(self):
+        raise NotImplementedError
+
+    def test_is_val_hex(self):
+        raise NotImplementedError
+
+    def test_is_val_float(self):
+        raise NotImplementedError
+
+    def test_get_dbc_file_list(self):
+        raise NotImplementedError
+
+    def test_df_to_mf4(self):
+        # likely can't test because don't want to construct an entirely new MF4
+        # test by creating an MF4 from a DF and check its attributes
+        raise NotImplementedError
+
     def tearDown(self):
         """ Remove all testing airports from the db. """
         connection = ENGINE.connect()

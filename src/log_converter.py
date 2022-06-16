@@ -89,10 +89,12 @@ def read_files_recursive(files_to_process):
         meta['log_end_time'] = next_meta['log_end_time'] # new end time is end time of next log
     return df, meta
 
+def get_files_to_process(folder):
+    return [k for k in os.listdir(input_files) if ('.log' in k) or ('.LOG' in k)].sort()
+
 def process_new_files():
     logger.debug("Looking for new CAN Log files to process")
-    files_to_process = [k for k in os.listdir(input_files) if ('.log' in k) or ('.LOG' in k)]
-    files_to_process.sort()
+    files_to_process = get_files_to_process()
     logger.debug("Data files: {}".format(files_to_process))
 
     global_dbc_files = list(get_dbc_file_list(dbc_folder))

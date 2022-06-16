@@ -66,8 +66,11 @@ def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type)
         new_vehicle(unit_number, unit_type)
     new_log_file(log_start_time, unit_number, status="Uploaded")
 
-def is_log_status(start_time, unit_number, status_to_check):
+def get_log_status(start_time, unit_number):
     s = Session()
     q = s.query(LogFile.processing_status).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
     s.close()
-    return (q == status_to_check)
+    return q
+
+def is_log_status(start_time, unit_number, status_to_check):
+    return (get_log_status(start_time, unit_number) == status_to_check)

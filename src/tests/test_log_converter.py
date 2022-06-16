@@ -15,13 +15,16 @@ class LogConverterTestCase(TestCase):
         """ Instantiate the test. """
         pass
 
-    def test_get_filename(self):
+    def test_get_new_log_filename(self):
         self.assertEqual(get_new_log_filename("2021-01-01T00:00:01.990Z", "CAN_001.LOG"), "2021-01-01T00-00-01-990Z")
         self.assertEqual(get_new_log_filename("2022-12-20T17:30:02.110Z", "CAN_001.LOG"), "2022-12-20T17-30-02-110Z")
 
     def test_checksum(self):
         """ Test the checksum function on local files. """
         pass
+
+    def test_get_files_to_process(self):
+        raise NotImplementedError
 
     def tearDown(self):
         """ Remove all testing airports from the db. """
