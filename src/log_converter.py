@@ -9,7 +9,7 @@ from pathlib import Path
 import json
 from itertools import repeat
 
-from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
+from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4, get_log_duration
 
 from config import DATA_FOLDER
 from database.crud import *
@@ -51,8 +51,8 @@ def read_files_recursive(files_to_process):
     create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'])
     # Move input log file to storage folder
     update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
-    logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
-    os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
+    # logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
+    # os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
 
     # if there is no log data then skip remaining processing
     if meta['len'] == 0:
@@ -99,6 +99,9 @@ def process_new_files():
     while len(files_to_process) > 0:
         df, meta = read_files_recursive(files_to_process)
         if meta['len'] > 0:
+            duration = get_log_duration(df)
+            update_log_file_len(meta['log_start_time'], meta['unit_number'], duration, len(df))
+            # update_log_file_size_time(meta['log_start_time'], mea)
             # if length is not zero then process the file
             # todo: store meta data in mf4 file!
             mf4 = df_to_mf4(df)

@@ -33,13 +33,18 @@ def new_log_file(start_time, unit_number, status="Uploaded", upload_time=datetim
     s.add(log)
     s.commit()
     log_id = log.id
-    print("Log ID: {}".format(log_id))
     s.close()
     return log_id
 
 def update_log_file_status(start_time, unit_number, processing_status):
     s = Session()
     s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).update({"processing_status": processing_status})
+    s.commit()
+    s.close()
+
+def update_log_file_len(start_time, unit_number, duration, samples):
+    s = Session()
+    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).update({"length": duration, "samples": samples})
     s.commit()
     s.close()
 
@@ -53,4 +58,11 @@ def delete_log_file(start_time, unit_number):
     s = Session()
     s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
     s.close()
+
+def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type):
+    if get_log_file(log_start_time, unit_number) is not None:
+        return # log exists, do nothing
+    if get_vehicle_by_unit_number(unit_number) is None:
+        new_vehicle(unit_number, unit_type)
+    new_log_file(log_start_time, unit_number, status="Uploaded")
 

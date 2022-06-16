@@ -256,3 +256,7 @@ def tail(path, lines=20):
         block_number -= 1
     all_read_text = b''.join(reversed(blocks))
     return b'\n'.join(all_read_text.splitlines()[-total_lines_wanted:])
+
+def get_log_duration(df:pd.DataFrame):
+    last_can_message = df.iloc[len(df)-1]
+    return last_can_message['timestamp']
