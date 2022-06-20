@@ -5,7 +5,7 @@ from datetime import datetime
 from pandas import Series, Float64Dtype
 from numpy import float64
 
-from helpers import read_log_to_df
+from helpers import dat_line_to_data, read_log_to_df, is_val_float, is_val_hex
 
 from database import db_session, ENGINE
 from database.models import LogFile, Vehicle
@@ -144,13 +144,65 @@ class LogConverterTestCase(TestCase):
                                                         "Data7": 0})))
 
     def test_dat_line_to_data(self):
-        raise NotImplementedError
+        line1 = "1234-1-100#12345678"
+        line1_data = {"timestamp": 1234.0, "CAN_BUS": 1.0 ,"CAN_ID": "100", "CAN_EXT": 0.0, "CAN_LEN": 4,
+                      "Data0": "12", "Data1": "34", "Data2": "56", "Data3": "78", "Data4": "00", "Data5": "00", "Data6": "00", "Data7": "00"}
+        self.assertDictEqual(line1_data, dat_line_to_data(line1))
+
+        
+        line2 = "778933.456-3-FFF#1234567890AABBCC"
+        line2_data = {"timestamp": 778933.456, "CAN_BUS": 3.0 ,"CAN_ID": "FFF", "CAN_EXT": 0.0, "CAN_LEN": 8,
+                      "Data0": "12", "Data1": "34", "Data2": "56", "Data3": "78", "Data4": "90", "Data5": "AA", "Data6": "BB", "Data7": "CC"}
+        self.assertDictEqual(line2_data, dat_line_to_data(line2))
+
+        line3 = "778933.456-2-FFEC23#AC"
+        line3_data = {"timestamp": 778933.456, "CAN_BUS": 2.0 ,"CAN_ID": "FFEC23", "CAN_EXT": 1.0, "CAN_LEN": 1,
+                      "Data0": "AC", "Data1": "00", "Data2": "00", "Data3": "00", "Data4": "00", "Data5": "00", "Data6": "00", "Data7": "00"}
+        self.assertDictEqual(line3_data, dat_line_to_data(line3))        
+        
+        line4 = "123.0-2-FFEC23#"
+        line4_data = {"timestamp": 123.0, "CAN_BUS": 2.0 ,"CAN_ID": "FFEC23", "CAN_EXT": 1.0, "CAN_LEN": 0,
+                      "Data0": "00", "Data1": "00", "Data2": "00", "Data3": "00", "Data4": "00", "Data5": "00", "Data6": "00", "Data7": "00"}
+        self.assertDictEqual(line4_data, dat_line_to_data(line4))
+        
+        self.assertRaises(Exception, dat_line_to_data, "ac")# test random string should fail
+        self.assertRaises(Exception, dat_line_to_data, "ac-1-123#1234") # test not number in timestamp
+        self.assertRaises(Exception, dat_line_to_data, "123-A-100#00") # test no number in can bus number
 
     def test_is_val_hex(self):
-        raise NotImplementedError
+        self.assertTrue(is_val_hex("AC"))
+        self.assertTrue(is_val_hex("ac"))
+        self.assertTrue(is_val_hex("12"))
+        self.assertTrue(is_val_hex("00"))
+        self.assertTrue(is_val_hex("99"))
+        self.assertTrue(is_val_hex("1234"))
+        self.assertTrue(is_val_hex("1234567890F"))
+        self.assertTrue(is_val_hex("ABCDEF"))
+        self.assertTrue(is_val_hex("FF"))
+        self.assertTrue(is_val_hex("00FF"))
+        self.assertTrue(is_val_hex("DEADBEEF"))
+        self.assertTrue(is_val_hex("0 "))
+        self.assertFalse(is_val_hex("Hey now brown cow"))
+        self.assertFalse(is_val_hex("YOU"))
+        self.assertFalse(is_val_hex("99  8"))
+        self.assertFalse(is_val_hex("ACT"))
 
     def test_is_val_float(self):
-        raise NotImplementedError
+        self.assertTrue(is_val_float("123"))
+        self.assertTrue(is_val_float(" 123"))
+        self.assertTrue(is_val_float("123 "))
+        self.assertTrue(is_val_float("123.123212321"))
+        self.assertFalse(is_val_float("  123  .  45"))
+        self.assertTrue(is_val_float("4566"))
+        self.assertTrue(is_val_float("0"))
+        self.assertTrue(is_val_float("0100"))
+        self.assertTrue(is_val_float("9990011"))
+        self.assertFalse(is_val_float("ac"))
+        self.assertFalse(is_val_float("123.56t"))
+        self.assertFalse(is_val_float("123.56-"))
+        self.assertFalse(is_val_float("!"))
+        self.assertFalse(is_val_float("TD"))
+        self.assertFalse(is_val_float("DEADBEEF"))
 
     def test_get_dbc_file_list(self):
         raise NotImplementedError

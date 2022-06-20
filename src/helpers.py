@@ -103,24 +103,28 @@ def split_string_every_n_chars(s, n=2):
     return [s[i:i+n] for i in range(0, len(s), n)]
 
 def dat_line_to_data(line:str):
-    data = {}
-    data['timestamp'] = np.float64(line[:line.find("-")])
-    line = line[line.find("-")+1:]
-    data['CAN_BUS'] = np.float64(int(line[0]))
-    data['CAN_ID'] = line[line.find("-")+1:line.find("#")]
-    data["CAN_EXT"] = np.float64(int((len(data['CAN_ID']) > 3)))
-    data_str = line[line.find("#")+1:]
-    can_message = split_string_every_n_chars(data_str, 2)
-    data['CAN_LEN'] = len(can_message)
-    can_message += ['00'] * (8 - len(can_message))
-    data["Data0"] = can_message[0]
-    data["Data1"] = can_message[1]
-    data["Data2"] = can_message[2]
-    data["Data3"] = can_message[3]
-    data["Data4"] = can_message[4]
-    data["Data5"] = can_message[5]
-    data["Data6"] = can_message[6]
-    data["Data7"] = can_message[7]
+    try:
+        data = {}
+        data['timestamp'] = np.float64(line[:line.find("-")])
+        line = line[line.find("-")+1:]
+        data['CAN_BUS'] = np.float64(int(line[0]))
+        data['CAN_ID'] = line[line.find("-")+1:line.find("#")]
+        data["CAN_EXT"] = np.float64(int((len(data['CAN_ID']) > 3)))
+        data_str = line[line.find("#")+1:]
+        can_message = split_string_every_n_chars(data_str, 2)
+        data['CAN_LEN'] = len(can_message)
+        can_message += ['00'] * (8 - len(can_message))
+        data["Data0"] = can_message[0]
+        data["Data1"] = can_message[1]
+        data["Data2"] = can_message[2]
+        data["Data3"] = can_message[3]
+        data["Data4"] = can_message[4]
+        data["Data5"] = can_message[5]
+        data["Data6"] = can_message[6]
+        data["Data7"] = can_message[7]
+    except ValueError as e:
+        logger.info("Incorrect data line format: {}".format(line))
+        raise Exception("Malformed DAT Packet")
     return data
 
 def read_dat_file(f):
