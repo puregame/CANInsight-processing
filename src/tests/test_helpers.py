@@ -1,11 +1,11 @@
 from unittest import TestCase
-from pathlib import Path
+from pathlib import Path, PosixPath
 from datetime import datetime
 
-from pandas import Series, Float64Dtype
-from numpy import float64
+from pandas import Series
+import numpy as np
 
-from helpers import dat_line_to_data, read_log_to_df, is_val_float, is_val_hex
+from helpers import dat_line_to_data, df_to_mf4, read_log_to_df, is_val_float, is_val_hex, get_dbc_file_list
 
 from database import db_session, ENGINE
 from database.models import LogFile, Vehicle
@@ -18,28 +18,34 @@ class LogConverterTestCase(TestCase):
         pass
     
     def test_read_log_with_continuation(self):
-        raise NotImplementedError
+        df, meta, continues = read_log_to_df("tests/test_data/test_data_dat_continues.log")
+        self.assertTrue(continues)
+        df, meta, continues = read_log_to_df("tests/test_data/test_data_continues.log")
+        self.assertTrue(continues)
 
     def test_read_log_with_bad_timestamp(self):
         """ test reading basic CSV with bad timestamp, lines should be ignored"""
         df, meta, continues = read_log_to_df("tests/test_data/test_data_bad_timestamp.log")
+        self.assertFalse(continues)
         self.assertEqual(len(df), 4)
 
     def test_read_csv_with_type(self):
         """ test reading basic CSV style log file with log type in meta """
         df, meta, continues = read_log_to_df("tests/test_data/test_data_with_csv_logtype.log")
-        self.assertEqual(continues, False)
+        self.assertFalse(continues)
         self.assertEqual(len(df), 6)
         self.assertIn("log_type", meta)
         self.assertEqual(meta['log_type'], "CSV0.1")
 
     def test_read_csv_no_type(self):
-        raise NotImplementedError
+        pass
+        # this test case is in other tests, test_data_all_good_lines, test_data_bad_lines
+        #  both have no type in metadata 
 
     def test_read_log_to_df_good_csv(self):
         """ test reading basic CSV style log file with no log type in meta """
         df, meta, continues = read_log_to_df("tests/test_data/test_data_all_good_lines.log")
-        self.assertEqual(continues, False)
+        self.assertFalse(continues)
         self.assertEqual(meta['unit_type'], "MM430")
         self.assertEqual(meta['unit_number'], "E00123")
         self.assertEqual(meta['can_1']['bus_name'], "Main")
@@ -56,7 +62,7 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 0, 
                                                         "Data5":0,
                                                         "Data6":0,
-                                                        "Data7":0}, dtype=float64)))
+                                                        "Data7":0}, dtype=np.float64)))
         self.assertTrue(df.iloc[5].equals(Series(data={"timestamp": 0.268, 
                                                         "CAN_BUS": 1, 
                                                         "CAN_EXT": 0, 
@@ -69,12 +75,12 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 25, 
                                                         "Data5": 129,
                                                         "Data6": 38,
-                                                        "Data7": 22}, dtype=float64)))
+                                                        "Data7": 22}, dtype=np.float64)))
 
     def test_read_log_to_df_bad_lines(self):
         """ test reading a log file into a dataframe"""
         df, meta, continues = read_log_to_df("tests/test_data/test_data_bad_lines.log")
-        self.assertEqual(continues, False)
+        self.assertFalse(continues)
         self.assertEqual(meta['unit_type'], "Test")
         self.assertEqual(meta['unit_number'], "Test")
         self.assertEqual(len(df), 9)
@@ -90,7 +96,7 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 0, 
                                                         "Data5":0,
                                                         "Data6":0,
-                                                        "Data7":0}, dtype=float64)))
+                                                        "Data7":0}, dtype=np.float64)))
         self.assertTrue(df.iloc[8].equals(Series(data={"timestamp": 0.268, 
                                                         "CAN_BUS": 1, 
                                                         "CAN_EXT": 0, 
@@ -103,12 +109,12 @@ class LogConverterTestCase(TestCase):
                                                         "Data4": 25, 
                                                         "Data5": 129,
                                                         "Data6": 38,
-                                                        "Data7": 22}, dtype=float64)))
+                                                        "Data7": 22}, dtype=np.float64)))
 
     def test_Read_log_to_df_dat(self):
         """ test reading basic DAT file """
         df, meta, continues = read_log_to_df("tests/test_data/test_data_dat.log")
-        self.assertEqual(continues, False)
+        self.assertFalse(continues)
         self.assertEqual(meta['unit_type'], "test")
         self.assertEqual(meta['unit_number'], "test")
         self.assertEqual(meta['log_start_time'], "2022-05-23T17:12:22.597Z")
@@ -205,12 +211,25 @@ class LogConverterTestCase(TestCase):
         self.assertFalse(is_val_float("DEADBEEF"))
 
     def test_get_dbc_file_list(self):
-        raise NotImplementedError
+        self.assertRaises(FileNotFoundError, get_dbc_file_list, "some_folder_that_does_not_exist")
+        self.assertListEqual(list(get_dbc_file_list(Path("tests/"))), []) # look in folder with not files
+        self.assertListEqual(list(get_dbc_file_list(Path("tests/test_data"))), [PosixPath('tests/test_data/test.dbc')]) # look in folder with files and a dbc
 
     def test_df_to_mf4(self):
-        # likely can't test because don't want to construct an entirely new MF4
         # test by creating an MF4 from a DF and check its attributes
-        raise NotImplementedError
+        df, meta, continues = read_log_to_df("tests/test_data/test_data_bad_lines.log")
+
+        mf4 = df_to_mf4(df)
+        self.assertEqual(mf4.version, "4.11")
+        self.assertRaises(KeyError, mf4.get_group, 1) # should be only group 0
+        can_group = mf4.get_group(0)
+        self.assertListEqual(list(mf4.get_group(0).columns), ['CAN_DataFrame.CAN_DataFrame.BusChannel', 'CAN_DataFrame.CAN_DataFrame.ID', 'CAN_DataFrame.CAN_DataFrame.IDE', 'CAN_DataFrame.CAN_DataFrame.DLC', 'CAN_DataFrame.CAN_DataFrame.DataLength', 'CAN_DataFrame.CAN_DataFrame.DataBytes', 'CAN_DataFrame.CAN_DataFrame.Dir', 'CAN_DataFrame.CAN_DataFrame.EDL', 'CAN_DataFrame.CAN_DataFrame.BRS'])
+        self.assertListEqual(list(mf4.get_group(0).index), [0.0, 0.06899999999999999, 0.09999999999999999, 0.103, 0.22899999999999998, 0.261])
+        first_item =  list(can_group.iloc[0])
+        self.assertListEqual(first_item[:5], [1, 913, 0, 8, 8])
+        for a,b in zip(first_item[5], [ 20, 129,  70,   0,  25, 129,  71,  85]):
+            self.assertEqual(a,b)
+        self.assertListEqual(first_item[6:], [0,0,0])
 
     def tearDown(self):
         """ Remove all testing airports from the db. """

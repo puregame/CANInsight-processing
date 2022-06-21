@@ -4,7 +4,7 @@ from pathlib import Path
 from database import db_session, ENGINE
 from database.models import LogFile, Vehicle
 
-from log_converter import get_new_log_filename
+from log_converter import get_files_to_process, get_new_log_filename
 
 from datetime import datetime
 
@@ -24,7 +24,8 @@ class LogConverterTestCase(TestCase):
         pass
 
     def test_get_files_to_process(self):
-        raise NotImplementedError
+        self.assertListEqual(get_files_to_process(Path("tests/")), [])
+        self.assertListEqual(get_files_to_process(Path("tests/test_data")), ['test_data_all_good_lines.log','test_data_bad_lines.log','test_data_bad_timestamp.log','test_data_continues.log','test_data_dat.log','test_data_dat_continues.log','test_data_with_csv_logtype.log'])
 
     def tearDown(self):
         """ Remove all testing airports from the db. """

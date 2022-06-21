@@ -35,10 +35,10 @@ CAN_SIGNAL_SOURCE=Source(
 )
 
 def get_dbc_file_list(folder):
-    if os.path.exists(folder):
-        files = os.listdir(folder)
-        return map(lambda x: folder/x, filter(lambda x: x[-4:]==".dbc", files))
-    return []
+    if not os.path.exists(folder):
+        raise FileNotFoundError("DBC Folder not found.")
+    files = os.listdir(folder)
+    return map(lambda x: folder/x, filter(lambda x: x[-4:]==".dbc", files))
 
 hex_to_int = lambda x: int(str(x), 16)
 
@@ -64,22 +64,25 @@ def read_csv_file(f):
     f.close()
     df = df.fillna(value='00')
     
-    df.drop(df.index[df['timestamp']==0.0], inplace=True) # drop all rows where timestamp is zero
-    df.drop(df.index[df['timestamp'].apply(is_val_float) == False], inplace=True) # drop all where timestamp is not float 
-    df['timestamp'] = df['timestamp'].astype(np.float64)
+
 
     logger.debug("\tread data to dataframe")
 
     # if timestamps are not floats, then this file probably has continuation
     if df['timestamp'].dtype != np.float64 and len(df) > 0:
         if df.iloc[-1, 0] == "---- EOF NEXT FILE TO FOLLOW ----":
-            logger.debug("this file has eof, combining with next file")
+            logger.debug("\t\tthis file has eof, marking for combining with next file")
             continues = True
             # remove last row and convert timestamps to float64
             df.drop(df.tail(1).index,inplace=True) # drop last row
             df['timestamp']=df.timestamp.apply(lambda x: np.float64(x))
         else:
-            raise Exception("Timestamps are not floats and last row is not EOF string!")
+            logger.warn("\t\t\tTimestamps are not floats and last row is not EOF string! \
+                                    This file contains invalid timestamps.")
+    
+    df.drop(df.index[df['timestamp']==0.0], inplace=True) # drop all rows where timestamp is zero
+    df.drop(df.index[df['timestamp'].apply(is_val_float) == False], inplace=True) # drop all where timestamp is not float 
+    df['timestamp'] = df['timestamp'].astype(np.float64)
 
     # for all columns that will be interpreted as hex, drop any values that are not hexadecimal
     for column in ['CAN_BUS', 'CAN_EXT', 'CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
