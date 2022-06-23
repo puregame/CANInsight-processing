@@ -1,1 +1,4 @@
 flask
+psycopg2
+sqlalchemy
+alembic

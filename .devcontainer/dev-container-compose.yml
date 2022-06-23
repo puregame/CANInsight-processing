@@ -1,0 +1,54 @@
+version: '3'
+services:
+  # Update this to the name of the service you want to work with in your docker-compose.yml file
+  webserver:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # Update 'VARIANT' to pick a version of Python: 3, 3.10, 3.9, 3.8, 3.7, 3.6
+        # Append -bullseye or -buster to pin to an OS version.
+        # Use -bullseye variants on local arm64/Apple Silicon.
+        VARIANT: 3
+
+
+    ports:
+      - "5000:5000"
+    volumes:
+      - ..:/workspace:cached
+      - V:\Software\CAN_data:/data:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    # Uncomment the next line to use a non-root user for all processes.
+    user: vscode
+
+  database:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: logserver_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/posrgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+# if running with local data volume
+volumes:
+  pgadmin_data:
+    driver: local
+  postgres_data:
+    driver: local
