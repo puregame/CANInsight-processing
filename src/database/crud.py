@@ -22,8 +22,10 @@ def get_vehicle_by_unit_number(unit_number):
     s.close()
     return q
 
-def new_log_file(start_time, unit_number, status="Uploaded", upload_time=datetime.now(), length=None, samples=None):
+def new_log_file(start_time, unit_number, status="Uploaded", upload_time=None, length=None, samples=None):
     s = Session()
+    if upload_time is None:
+        upload_time=datetime.now()
     log = LogFile(start_time=start_time, 
                      upload_time=upload_time, 
                      unit_number=unit_number, 
@@ -57,18 +59,19 @@ def get_log_file(start_time, unit_number):
 def delete_log_file(start_time, unit_number):
     s = Session()
     s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
+    s.commit()
     s.close()
 
-def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type):
+def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type=None):
     if get_log_file(log_start_time, unit_number) is not None:
         return # log exists, do nothing
     if get_vehicle_by_unit_number(unit_number) is None:
         new_vehicle(unit_number, unit_type)
-    new_log_file(log_start_time, unit_number, status="Uploaded")
+    return new_log_file(log_start_time, unit_number, status="Uploaded")
 
 def get_log_status(start_time, unit_number):
     s = Session()
-    q = s.query(LogFile.processing_status).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
+    q = s.query(LogFile.processing_status).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()[0]
     s.close()
     return q
 

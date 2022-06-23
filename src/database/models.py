@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Date, Float, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, String, Date, Float, Integer, DateTime, Boolean, ForeignKey, UniqueConstraint
 
 Base = declarative_base()
 
@@ -20,6 +20,7 @@ class Vehicle(Base):
 
 class LogFile(Base):
     __tablename__ = 'log_file'
+    __table_args__ = (UniqueConstraint('start_time', 'unit_number', name='_start_unit_unique_constraint'), )
     id = Column(Integer, primary_key=True, autoincrement=True)
     start_time = Column(DateTime)
     upload_time = Column(DateTime, default=datetime.now, nullable=False)
