@@ -101,7 +101,7 @@ def process_new_files():
 
     global_dbc_files = list(get_dbc_file_list(dbc_folder))
     while len(files_to_process) > 0:
-        df, meta = read_files_recursive(files_to_process)
+        df, meta  = read_files_recursive(files_to_process)
         if is_log_status(meta['log_start_time'], meta['unit_number'], "Uploading"):
             # do nothing, log is still uploading and should not be processed
             continue
