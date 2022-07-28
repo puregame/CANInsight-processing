@@ -23,6 +23,9 @@ class LogConverterTestCase(TestCase):
         df, meta, continues = read_log_to_df("tests/test_data/test_data_continues.log")
         self.assertTrue(continues)
 
+    def test_log_multiple_continues(self):
+        raise NotImplementedError
+
     def test_read_log_with_bad_timestamp(self):
         """ test reading basic CSV with bad timestamp, lines should be ignored"""
         df, meta, continues = read_log_to_df("tests/test_data/test_data_bad_timestamp.log")

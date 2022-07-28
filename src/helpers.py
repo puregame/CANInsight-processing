@@ -63,10 +63,7 @@ def read_csv_file(f):
                         on_bad_lines='skip')
     f.close()
     df = df.fillna(value='00')
-    
-
-
-    logger.debug("\tread data to dataframe")
+    logger.debug("\tRead data to dataframe")
 
     # if timestamps are not floats, then this file probably has continuation
     if df['timestamp'].dtype != np.float64 and len(df) > 0:
@@ -85,7 +82,7 @@ def read_csv_file(f):
     df['timestamp'] = df['timestamp'].astype(np.float64)
 
     # for all columns that will be interpreted as hex, drop any values that are not hexadecimal
-    for column in ['CAN_BUS', 'CAN_EXT', 'CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
+    for column in ['CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
         df.drop(df.index[df[column].apply(is_val_hex) == False], inplace=True)
 
     logger.debug('\tconverting all columns into integer values')

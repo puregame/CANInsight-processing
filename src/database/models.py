@@ -31,6 +31,7 @@ class LogFile(Base):
     length = Column(Float) #length of log in seconds
     samples = Column(Integer)
     processing_status = Column(String, default="Uploaded")
+    original_file_name = Column(String)
 
     def __repr__(self):
         return "<LogFile(id='{}', start_time='{}', unit_number={}, length_time={}, samples={})>"\

@@ -45,7 +45,7 @@ def post():
         return "", 409
     
     # create the log file and mark it as "uploading"
-    new_log_file(log_start_time, unit_number, status="Uploading")
+    new_log_file(log_start_time, unit_number, status="Uploading", original_file_name="{}_{}".format(unit_number, log_name))
 
     initial_upload_name = DATA_FOLDER / "in_logs" / "{}_{}".format(unit_number, log_name)
 

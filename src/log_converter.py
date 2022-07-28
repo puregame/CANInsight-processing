@@ -1,4 +1,5 @@
 from database import *
+from database.upgrade import init_and_upgrade_db
 
 import os
 import time
@@ -22,6 +23,8 @@ output_files = DATA_FOLDER / "out/"
 output_files.mkdir(exist_ok=True)
 dbc_folder = DATA_FOLDER / 'dbc/'
 dbc_folder.mkdir(exist_ok=True)
+
+init_and_upgrade_db()
 
 def create_unit_folders(unit_output_folder):
     unit_output_folder.mkdir(parents=True, exist_ok=True)
@@ -48,7 +51,7 @@ def read_files_recursive(files_to_process):
 
     new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
 
-    create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'])
+    create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'], original_file_name=this_file)
     # Move input log file to storage folder
     update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
     logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
@@ -101,7 +104,7 @@ def process_new_files():
 
     global_dbc_files = list(get_dbc_file_list(dbc_folder))
     while len(files_to_process) > 0:
-        df, meta = read_files_recursive(files_to_process)
+        df, meta  = read_files_recursive(files_to_process)
         if is_log_status(meta['log_start_time'], meta['unit_number'], "Uploading"):
             # do nothing, log is still uploading and should not be processed
             continue
