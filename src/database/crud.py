@@ -22,7 +22,7 @@ def get_vehicle_by_unit_number(unit_number):
     s.close()
     return q
 
-def new_log_file(start_time, unit_number, status="Uploaded", upload_time=None, length=None, samples=None):
+def new_log_file(start_time, unit_number, status="Uploaded", upload_time=None, length=None, samples=None,original_file_name=""):
     s = Session()
     if upload_time is None:
         upload_time=datetime.now()
@@ -31,7 +31,8 @@ def new_log_file(start_time, unit_number, status="Uploaded", upload_time=None, l
                      unit_number=unit_number, 
                      length=length,
                      samples=samples,
-                     processing_status=status)
+                     processing_status=status,
+                     original_file_name=original_file_name)
     s.add(log)
     s.commit()
     log_id = log.id
@@ -62,12 +63,12 @@ def delete_log_file(start_time, unit_number):
     s.commit()
     s.close()
 
-def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type=None):
+def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type=None, original_file_name=""):
     if get_log_file(log_start_time, unit_number) is not None:
         return # log exists, do nothing
     if get_vehicle_by_unit_number(unit_number) is None:
         new_vehicle(unit_number, unit_type)
-    return new_log_file(log_start_time, unit_number, status="Uploaded")
+    return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name)
 
 def get_log_status(start_time, unit_number):
     s = Session()
