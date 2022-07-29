@@ -1,6 +1,6 @@
 from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle
 from flask import Flask, request
-from log_logger import handler
+from webserver_logger import handler
 import os
 from pathlib import Path
 
@@ -9,11 +9,17 @@ from database.upgrade import init_and_upgrade_db
 from database.crud import *
 
 app = Flask(__name__)
+app.logger.addHandler(handler)
 init_and_upgrade_db()
 
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
+
+@app.route("/v")
+def api_version():
+    app.logger.debug("Version route was hit")
+    return "0.3.3" # update this to docker version!
 
 @app.route('/data_file/', methods=['GET'])
 def check_for_file():
@@ -47,7 +53,8 @@ def post():
     # create the log file and mark it as "uploading"
     new_log_file(log_start_time, unit_number, status="Uploading", original_file_name="{}_{}".format(unit_number, log_name))
 
-    initial_upload_name = DATA_FOLDER / "in_logs" / "{}_{}".format(unit_number, log_name)
+    initial_upload_name = DATA_FOLDER / "in_logs/uploading" / "{}_{}".format(unit_number, log_name)
+    final_upload_name = DATA_FOLDER / "in_logs" / "{}_{}".format(unit_number, log_name)
 
     # make sure data file does not exist before writing
     if not os.path.isfile(initial_upload_name):
@@ -55,10 +62,11 @@ def post():
             the_file.write(request.data)
     else:
         return "", 409
+    # move file to folder to process
+    os.rename(initial_upload_name, final_upload_name)
     # change log file status to "uploaded"
     update_log_file_status(log_start_time, unit_number, "Uploaded")
     return "", 200
 
 if __name__ == '__main__':
-    app.logger.addHandler(handler)
     app.run(debug=True, host="0.0.0.0")

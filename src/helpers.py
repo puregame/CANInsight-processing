@@ -6,7 +6,7 @@ import pandas as pd
 import os
 import json
 
-from log_logger import logger
+from log_converter_logger import logger
 
 # Constants for can signal conversion
 
@@ -160,6 +160,7 @@ def read_dat_file(f):
             logger.debug("\t\t\tDone {} lines".format(i))
     logger.debug("\t\tDone looping through lines")
     df = pd.concat([df, pd.DataFrame(can_frames)], ignore_index=True)
+    del can_frames
 
     logger.debug('\tconverting all columns into integer values')
     # converting all columns into integer values
