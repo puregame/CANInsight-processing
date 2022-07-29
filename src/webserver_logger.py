@@ -6,7 +6,7 @@ from config import DATA_FOLDER
 
 formatter = logging.Formatter(
     "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s: %(message)s")
-logger = logging.getLogger('log_converter')
+logger = logging.getLogger('web_api')
 logger.setLevel(logging.DEBUG)
 handler = RotatingFileHandler(DATA_FOLDER/'web.log', maxBytes=1000000, backupCount=5)
 handler.setFormatter(formatter)

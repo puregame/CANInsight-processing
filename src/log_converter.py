@@ -126,7 +126,12 @@ def process_new_files():
         new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
         mf4.save(meta['unit_output_folder'] / "raw-{}.mf4".format(new_file_name))
         update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
-        unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
+        try:
+            unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
+        except FileNotFoundError:
+            # dbc folder doesn't exist, skip silently
+            logger.warning("DBC File for unit type {} does not exist".format(meta['unit_type']))
+            unit_type_dbc_files = []
         all_dbc_files = unit_type_dbc_files+global_dbc_files
         all_dbc_files = list(zip(all_dbc_files, repeat(0)))
 

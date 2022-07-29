@@ -19,7 +19,7 @@ def hello_world():
 @app.route("/v")
 def api_version():
     app.logger.debug("Version route was hit")
-    return "0.3.3" # update this to docker version!
+    return "0.3.5" # update this to docker version!
 
 @app.route('/data_file/', methods=['GET'])
 def check_for_file():
@@ -43,8 +43,7 @@ def post():
     log_start_time = request.args['log_time']
     # if unit id does not exist then create it
     if not get_vehicle_by_unit_number(unit_number):
-        app.logger.debug("creating unit: {}".format(unit_number))
-        new_vehicle(unit_number)
+        return "No vehicle for this unit", 400
 
     # if log file exists return 409 (conflict) do not save file
     if get_log_file(log_start_time, unit_number):
@@ -69,4 +68,5 @@ def post():
     return "", 200
 
 if __name__ == '__main__':
+    app.logger.addHandler(handler)
     app.run(debug=True, host="0.0.0.0")
