@@ -1,6 +1,3 @@
-from database import *
-from database.upgrade import init_and_upgrade_db
-
 import os
 import time
 from datetime import datetime, timedelta
@@ -10,15 +7,20 @@ from pathlib import Path
 import json
 from itertools import repeat
 
+from log_converter_logger import logger
+
+from database import *
+from database.upgrade import init_and_upgrade_db
+
 from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 
 from config import DATA_FOLDER
 from database.crud import *
 
-from log_logger import logger
-
 input_files = DATA_FOLDER / "in_logs/"
 input_files.mkdir(exist_ok=True)
+input_files_uploading = DATA_FOLDER / "in_logs/uploading"
+input_files_uploading.mkdir(exist_ok=True)
 output_files = DATA_FOLDER / "out/"
 output_files.mkdir(exist_ok=True)
 dbc_folder = DATA_FOLDER / 'dbc/'
@@ -44,6 +46,7 @@ def read_files_recursive(files_to_process):
     this_file = files_to_process.pop(0)
     logger.info("Starting processing for file name: {}".format(this_file))
     df, meta, continues = read_log_to_df(input_files / this_file)
+    logger.info("Read log file to df")
     meta['unit_output_folder'] = output_files/meta['unit_type']/meta['unit_number']
     create_unit_folders(meta['unit_output_folder'])
     meta['file_name'] = this_file
@@ -117,12 +120,18 @@ def process_new_files():
         
         # todo: store meta data in mf4 file!
         mf4 = df_to_mf4(df)
+        del df
         # mf4.attach(str(meta).encode('utf-8'))
 
         new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
         mf4.save(meta['unit_output_folder'] / "raw-{}.mf4".format(new_file_name))
         update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
-        unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
+        try:
+            unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
+        except FileNotFoundError:
+            # dbc folder doesn't exist, skip silently
+            logger.warning("DBC File for unit type {} does not exist".format(meta['unit_type']))
+            unit_type_dbc_files = []
         all_dbc_files = unit_type_dbc_files+global_dbc_files
         all_dbc_files = list(zip(all_dbc_files, repeat(0)))
 
@@ -133,6 +142,6 @@ def process_new_files():
 
 if __name__ == "__main__":
     while(True):
-        print("Processing new files")
+        logger.info("Processing new files")
         process_new_files()
         time.sleep(120)

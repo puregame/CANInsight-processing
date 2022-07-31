@@ -11,13 +11,12 @@ from database.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-print(context)
 config = context.config
 config.set_main_option("sqlalchemy.url", DATABASE_CONFIG['sqlalchemy.url'])
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

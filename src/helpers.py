@@ -6,7 +6,7 @@ import pandas as pd
 import os
 import json
 
-from log_logger import logger
+from log_converter_logger import logger
 
 # Constants for can signal conversion
 
@@ -63,7 +63,7 @@ def read_csv_file(f):
                         on_bad_lines='skip')
     f.close()
     df = df.fillna(value='00')
-    logger.debug("\tRead data to dataframe")
+    logger.debug("\tRead CSV data to dataframe")
 
     # if timestamps are not floats, then this file probably has continuation
     if df['timestamp'].dtype != np.float64 and len(df) > 0:
@@ -127,12 +127,13 @@ def dat_line_to_data(line:str):
         raise Exception("Malformed DAT Packet")
     return data
 
+def data_to_csv_line(data):
+    return "{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(data['timestamp'], data['CAN_BUS'], data["CAN_EXT"], data["CAN_ID"], data['CAN_LEN'],
+                data['Data0'],data['Data1'],data['Data2'],data['Data3'],data['Data4'],data['Data5'],data['Data6'],data['Data7'])
+
 def read_dat_file(f):
     continues = False
     header = f.readline()
-    # df = pd.DataFrame(columns=["timestamp", "CAN_BUS", "CAN_EXT", "CAN_ID", "CAN_LEN", "Data0", "Data1", "Data2", "Data3", "Data4", "Data5", "Data6", "Data7"],
-    #                   dtypes= {'timestamp': np.float64, 'CAN_BUS': np.int8,'CAN_EXT': np.int8, 'CAN_LEN': np.int8})
-    
     df = pd.DataFrame({'timestamp': pd.Series(dtype=np.float64),
                        'CAN_BUS': pd.Series(dtype=np.int8,),
                        'CAN_EXT': pd.Series(dtype=np.int8),
@@ -149,17 +150,25 @@ def read_dat_file(f):
     can_frames = []
     logger.debug("\t\tStarting looping through lines")
     i = 0
+    csv_file = open("/tmp/test_file.csv", "w")
+    csv_file.write("timestamp,CAN_BUS,CAN_EXT,CAN_ID,CAN_LEN,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7\n")
     for line in f:
         line = line.replace("\n", "")
         if line == "---- EOF NEXT FILE TO FOLLOW ----":
             continues = True
             break
-        can_frames.append(dat_line_to_data(line))
+        csv_file.write(data_to_csv_line(dat_line_to_data(line)))
+
         i+=1
         if (i % 1000000) == 1:
             logger.debug("\t\t\tDone {} lines".format(i))
+    csv_file.close()
     logger.debug("\t\tDone looping through lines")
-    df = pd.concat([df, pd.DataFrame(can_frames)], ignore_index=True)
+    
+    csv_file = open("/tmp/test_file.csv", "r")
+    df = pd.read_csv(csv_file,
+                        dtype={'CAN_ID': str, 'Data0': str,'Data1': str,'Data2': str,'Data3': str,'Data4': str,'Data5': str,'Data6': str,'Data7': str},
+                        on_bad_lines='skip')
 
     logger.debug('\tconverting all columns into integer values')
     # converting all columns into integer values
