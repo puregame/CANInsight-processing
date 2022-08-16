@@ -32,7 +32,22 @@ class LogFile(Base):
     samples = Column(Integer)
     processing_status = Column(String, default="Uploaded")
     original_file_name = Column(String)
+    note = Column(String)
 
     def __repr__(self):
         return "<LogFile(id='{}', start_time='{}', unit_number={}, length_time={}, samples={})>"\
                 .format(self.id, self.start_time, self.unit_number, self.length_time, self.samples)
+
+class LogComment(Base):
+    __tablename__ = "log_comment"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    log_id = Column(Integer, ForeignKey("log_file.id",
+                                        name="comment_log_id_fkey",
+                                        onupdate='CASCADE',
+                                        ondelete='CASCADE'), nullable=False)
+    timestamp = Column(Integer)
+    comment = Column(String)
+
+    def __repr__(self):
+        return "<LogComment(log_id='{}', timestamp='{}', comment={})>"\
+            .format(self.log_id, self.timestamp, self.comment)
