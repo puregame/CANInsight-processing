@@ -19,7 +19,7 @@ def hello_world():
 @app.route("/v")
 def api_version():
     app.logger.debug("Version route was hit")
-    return "0.3.5" # update this to docker version!
+    return "0.3.6" # update this to docker version!
 
 @app.route('/data_file/', methods=['GET'])
 def check_for_file():
