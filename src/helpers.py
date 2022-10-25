@@ -115,7 +115,7 @@ def dat_line_to_data(line:str):
         can_message = split_string_every_n_chars(data_str, 2)
         data['CAN_LEN'] = len(can_message)
         can_message += ['00'] * (8 - len(can_message))
-        for i in range(7): # throw valueerror if any of the data is not in hex format
+        for i in range(7): # throw valueerror if any of the data is not in hex format, check now before the real processing begins
             int(can_message[i], 16)
         data["Data0"] = can_message[0]
         data["Data1"] = can_message[1]
@@ -126,7 +126,7 @@ def dat_line_to_data(line:str):
         data["Data6"] = can_message[6]
         data["Data7"] = can_message[7]
     except ValueError as e:
-        logger.info("Incorrect data line format: {}".format(line))
+        logger.info("\t\t\tIncorrect data line format: {}".format(line))
         raise Exception("Malformed DAT Packet")
     return data
 
@@ -163,8 +163,9 @@ def read_dat_file(f):
         try:
             csv_file.write(data_to_csv_line(dat_line_to_data(line)))
         except Exception as ee:
-            logger.error("Exception at line: {} Skipping line".format(line))
-            logger.error(ee)
+            # catch malformed lines, log exception and continue while skipping the line
+            logger.info("\t\tException processing line: {}. Skipping line".format(line))
+            logger.info(ee)
             pass
 
         i+=1
