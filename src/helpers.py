@@ -109,11 +109,14 @@ def dat_line_to_data(line:str):
         line = line[line.find("-")+1:]
         data['CAN_BUS'] = np.float64(int(line[0]))
         data['CAN_ID'] = line[line.find("-")+1:line.find("#")]
+        int(data['CAN_ID'], 16) # thorw value error if can ID is not in hex format
         data["CAN_EXT"] = np.float64(int((len(data['CAN_ID']) > 3)))
         data_str = line[line.find("#")+1:]
         can_message = split_string_every_n_chars(data_str, 2)
         data['CAN_LEN'] = len(can_message)
         can_message += ['00'] * (8 - len(can_message))
+        for i in range(7): # throw valueerror if any of the data is not in hex format, check now before the real processing begins
+            int(can_message[i], 16)
         data["Data0"] = can_message[0]
         data["Data1"] = can_message[1]
         data["Data2"] = can_message[2]
@@ -123,7 +126,7 @@ def dat_line_to_data(line:str):
         data["Data6"] = can_message[6]
         data["Data7"] = can_message[7]
     except ValueError as e:
-        logger.info("Incorrect data line format: {}".format(line))
+        logger.info("\t\t\tIncorrect data line format: {}".format(line))
         raise Exception("Malformed DAT Packet")
     return data
 
@@ -157,7 +160,13 @@ def read_dat_file(f):
         if line == "---- EOF NEXT FILE TO FOLLOW ----":
             continues = True
             break
-        csv_file.write(data_to_csv_line(dat_line_to_data(line)))
+        try:
+            csv_file.write(data_to_csv_line(dat_line_to_data(line)))
+        except Exception as ee:
+            # catch malformed lines, log exception and continue while skipping the line
+            logger.info("\t\tException processing line: {}. Skipping line".format(line))
+            logger.info(ee)
+            pass
 
         i+=1
         if (i % 1000000) == 1:

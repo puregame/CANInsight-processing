@@ -16,7 +16,7 @@ services:
       - "5000:5000"
     volumes:
       - ..:/workspace:cached
-      - V:\Software\CAN_data:/data:cached
+      - C:\Software\can_data:/data:cached
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
