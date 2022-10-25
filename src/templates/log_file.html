@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ vehicle['unit_number'] }} {{ log['start_time'] }} - LogServer{% endblock %}
+
+{% block content %}
+    <h1>Log File: {{ log['start_time'] }}</h1>
+    <a href="/vehicles/{{ vehicle['unit_number'] }}">Unit: {{ vehicle['unit_number'] }}</a>
+    <p>vehicle type: {{ vehicle['vehicle_type'] }}</p>
+    <p>Upload time: {{ log['upload_time'] }} </p>
+    <p>length: {{ log['length'] }} </p>
+    <p>samples: {{ log['samples'] }} </p>
+    <a href="/log_file/{{ vehicle['unit_number'] }}/{{ log['start_time'] }}/"> Download Log </a>
+    <hr>
+    
+    <H4>Comments for this log</H4>
+    {% for comment in comments %}
+        <p>Comment: {{ comment['comment'] }} at time: {{comment['timestamp']}} 
+            
+            <form  method="post" >
+                <input type="hidden" name="comment_id" value="{{comment['id']}}" />
+                <input type="submit" name='submit_button' value="Delete Comment" />
+            </form>
+            </p>
+        <hr>
+    {% endfor %}
+
+    <hr>
+    <h4>Insert New Comment</h4>
+    
+    <form action="{{ url_for('get_log', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post">
+    <label for="comment">Comment:</label>
+    <input type="text" id="comment" name="comment" placeholder="Comment About Log">
+    <label for="timestamp">Timestamp:</label>
+    <input type="number" id="timestamp" name="timestamp" value=0 >
+    <input type="submit" name='submit_button' value="Submit Comment"></button>
+    </form>
+{% endblock %}

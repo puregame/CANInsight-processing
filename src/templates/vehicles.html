@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Vehicles - LogServer{% endblock %}
+
+{% block content %}
+  <h1>List of Units</h1>
+  <br>
+  <hr>
+  {% for vehicle in vehicles %}
+        <a href="./{{vehicle['unit_number'] }}">
+            <h3>{{ vehicle['unit_number'] }}</h3>
+        </a>
+        <span class="badge badge-primary">{{ vehicle['vehicle_type'] }}</span>
+        <hr>
+    {% endfor %}
+{% endblock %}
