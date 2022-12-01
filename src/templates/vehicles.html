@@ -7,9 +7,9 @@
   <hr>
   {% for vehicle in vehicles %}
         <a href="./{{vehicle['unit_number'] }}">
-            <h3>{{ vehicle['unit_number'] }}</h3>
+            <h4>{{ vehicle['unit_number'] }}</h4>
         </a>
-        <span class="badge badge-primary">{{ vehicle['vehicle_type'] }}</span>
+        Vehicle Type: <span class="badge badge-primary">{{ vehicle['vehicle_type'] }}</span>
         <hr>
     {% endfor %}
 {% endblock %}

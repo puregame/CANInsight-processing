@@ -12,11 +12,12 @@
 
   {% for log in logs %}
         <a href="./{{log['start_time']}}">
-            <h3>{{ log['start_time'] }} {{ log['unit_number'] }}</h3>
+            <h4>{{ log['start_time'] }} {{ log['unit_number'] }}</h4>
         </a>
-        <p>Upload time: {{ log['upload_time'] }} </p>
-        <p>length: {{ log['length'] }} </p>
-        <p>samples: {{ log['samples'] }} </p>
+        <p><b>{{ log['headline'] }}</b><br>
+            Upload time: {{ log['upload_time'] }} <br>
+            length: {{ log['length'] }} <br>
+            samples: {{ log['samples'] }} </p>
         <hr>
     {% endfor %}
 {% endblock %}

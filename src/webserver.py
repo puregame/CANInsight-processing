@@ -2,7 +2,7 @@ from crypt import methods
 from fileinput import filename
 from pydoc import render_doc
 from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle, get_vehicles, get_logs_for_unit, get_comments_for_log
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for
 from webserver_logger import handler
 import os
 from pathlib import Path
@@ -30,6 +30,31 @@ def unit_list():
 def specific_unit(unit_id):
     return render_template("vehicle.html", vehicle=get_vehicle_by_unit_number(unit_id), logs=get_logs_for_unit(unit_id))
 
+@app.route("/vehicles/<unit_id>/<start_time>/hide", methods=['GET', 'POST'])
+def hide_log(unit_id, start_time):
+    log = get_log_file(start_time, unit_id)
+    if request.method == "POST":
+        if request.form.get('submit_button') == "Hide Log":
+            print("hiding log: {}".format(log.id))
+            hide_log_file(log.id)
+    vehicle=get_vehicle_by_unit_number(unit_id)
+    comments = get_comments_for_log(log.id)
+    return redirect(url_for('.specific_unit', unit_id=unit_id))
+
+
+@app.route("/vehicles/<unit_id>/<start_time>/update_log_headline", methods=['GET', 'POST'])
+def update_log_headline(unit_id, start_time):
+    log = get_log_file(start_time, unit_id)
+    if request.method == "POST":
+        if request.form.get('submit_button') == "Submit Headline":
+            print("updating headline: {}".format(log.id))
+            update_log_file_headline(log.id, request.form.get('headline'))
+    vehicle=get_vehicle_by_unit_number(unit_id)
+    comments = get_comments_for_log(log.id)
+    log = get_log_file(start_time, unit_id)
+    return render_template("log_file.html", vehicle=vehicle, log=log, comments=comments)
+
+
 @app.route("/vehicles/<unit_id>/<start_time>/", methods=['GET', 'POST'])
 def get_log(unit_id, start_time):
     log = get_log_file(start_time, unit_id)
@@ -47,17 +72,25 @@ def get_log(unit_id, start_time):
 
 @app.route("/log_file/<unit_number>/<start_time>/")
 def download_log(unit_number, start_time):
-    vehicle=get_vehicle_by_unit_number(unit_number)
+    print("Downloading unit: {} ".format(unit_number))
+    vehicle = get_vehicle_by_unit_number(unit_number)
     file_to_download = "extracted-{}Z.mf4".format(start_time.replace(":", "-").replace(".","-").replace(" ", "T")[:-3])
+    print(file_to_download)
+    print(vehicle)
+    # if start_time < "2020-01-01 00:0start_time0:00.000000":
+    #     # if date did nto work, file will be under file name, not date
+    #     log = get_log_file(start_time, unit_number)
+    #     print(log)
+    #     send_from_directory(directory=output_files/vehicle.vehicle_type/unit_number, path=log.original_file_name)
     print(unit_number)
     print(start_time)
     print(file_to_download)
-    return send_from_directory(directory=output_files/vehicle.vehicle_type/unit_number, path=file_to_download, filename=file_to_download)
+    return send_from_directory(directory=output_files/vehicle.vehicle_type/unit_number, path=file_to_download)
 
 @app.route("/v")
 def api_version():
     app.logger.debug("Version route was hit")
-    return "0.3.9" # update this to docker version!
+    return "0.3.11" # update this to docker version!
 
 @app.route('/data_file/', methods=['GET'])
 def check_for_file():

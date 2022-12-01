@@ -3,14 +3,17 @@
 
 {% block content %}
     <h1>Log File: {{ log['start_time'] }}</h1>
+    <h2>{{ log['headline'] }}</h2>
     <a href="/vehicles/{{ vehicle['unit_number'] }}">Unit: {{ vehicle['unit_number'] }}</a>
-    <p>vehicle type: {{ vehicle['vehicle_type'] }}</p>
-    <p>Upload time: {{ log['upload_time'] }} </p>
-    <p>length: {{ log['length'] }} </p>
-    <p>samples: {{ log['samples'] }} </p>
-    <a href="/log_file/{{ vehicle['unit_number'] }}/{{ log['start_time'] }}/"> Download Log </a>
+    <p>
+        vehicle type: {{ vehicle['vehicle_type'] }} <br>
+        Upload time: {{ log['upload_time'] }} <br>
+        length: {{ log['length'] }} <br>
+        samples: {{ log['samples'] }} <br>
+        samples: {{ log['original_file_name'] }} <br>
+        <a href="/log_file/{{ vehicle['unit_number'] }}/{{ log['start_time'] }}/"> Download Log </a>
     <hr>
-    
+
     <H4>Comments for this log</H4>
     {% for comment in comments %}
         <p>Comment: {{ comment['comment'] }} at time: {{comment['timestamp']}} 
@@ -24,6 +27,15 @@
     {% endfor %}
 
     <hr>
+    <h4>Update Headline</h4>
+    
+    <form action="{{ url_for('update_log_headline', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post">
+    <label for="headline">Headline:</label>
+    <input type="text" id="headline" name="headline" placeholder="headline For Log">
+    <input type="submit" name='submit_button' value="Submit Headline"></button>
+    </form>
+
+    <hr>
     <h4>Insert New Comment</h4>
     
     <form action="{{ url_for('get_log', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post">
@@ -33,4 +45,11 @@
     <input type="number" id="timestamp" name="timestamp" value=0 >
     <input type="submit" name='submit_button' value="Submit Comment"></button>
     </form>
+    
+    <hr>
+    <p>Hide this log file from Website: Note there is currently no way to undo this!</p>
+    <form action="{{ url_for('hide_log', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post" onsubmit="return confirm('Are you sure you want to hide this log?');">
+        <input type="submit" name='submit_button' value="Hide Log"></button>
+    </form>
+    
 {% endblock %}

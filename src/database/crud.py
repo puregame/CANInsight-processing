@@ -2,7 +2,7 @@ from re import L
 from database.models import *
 
 from config import DATABASE_CONFIG
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
 # sqlalchemy stuff 
 
@@ -64,7 +64,28 @@ def get_log_file(start_time, unit_number):
     s.close()
     return q
 
+def hide_log_file(log_id):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.id==log_id).update({"hide_in_web": True})
+    s.commit()
+    s.close()
+    return q
+
+
+def update_log_file_headline(log_id, headline):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.id==log_id).update({"headline": headline})
+    s.commit()
+    s.close()
+    return q
+
 def get_logs_for_unit(unit_number):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hide_in_web==False).order_by(desc(LogFile.upload_time)).all()
+    s.close()
+    return q
+
+def get_all_logs_for_unit(unit_number):
     s = Session()
     q = s.query(LogFile).filter(LogFile.unit_number==unit_number).all()
     s.close()
