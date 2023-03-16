@@ -33,10 +33,12 @@ class LogFile(Base):
     processing_status = Column(String, default="Uploaded")
     original_file_name = Column(String)
     note = Column(String)
+    headline = Column(String)
+    hide_in_web = Column(Boolean, default=False)
 
     def __repr__(self):
-        return "<LogFile(id='{}', start_time='{}', unit_number={}, length_time={}, samples={})>"\
-                .format(self.id, self.start_time, self.unit_number, self.length_time, self.samples)
+        return "<LogFile(id='{}', start_time='{}', unit_number={}, length_time={}, samples={}, original_file_name={})>"\
+                .format(self.id, self.start_time, self.unit_number, self.length, self.samples, self.original_file_name)
 
 class LogComment(Base):
     __tablename__ = "log_comment"

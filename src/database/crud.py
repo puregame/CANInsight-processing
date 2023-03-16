@@ -1,7 +1,8 @@
+from re import L
 from database.models import *
 
 from config import DATABASE_CONFIG
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
 # sqlalchemy stuff 
 
@@ -15,6 +16,12 @@ def new_vehicle(unit_number, vehicle_type, serial_number=None, status=None):
     s.add(b)
     s.commit()
     s.close()
+
+def get_vehicles():
+    s = Session()
+    q = s.query(Vehicle).all()
+    s.close()
+    return q
 
 def get_vehicle_by_unit_number(unit_number):
     s = Session()
@@ -57,6 +64,39 @@ def get_log_file(start_time, unit_number):
     s.close()
     return q
 
+def hide_log_file(log_id):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.id==log_id).update({"hide_in_web": True})
+    s.commit()
+    s.close()
+    return q
+
+
+def update_log_file_headline(log_id, headline):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.id==log_id).update({"headline": headline})
+    s.commit()
+    s.close()
+    return q
+
+def get_logs_for_unit(unit_number):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hide_in_web==False).order_by(desc(LogFile.upload_time)).all()
+    s.close()
+    return q
+
+def get_all_logs_for_unit(unit_number):
+    s = Session()
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number).all()
+    s.close()
+    return q
+
+def get_comments_for_log(log_id):
+    s = Session()
+    q = s.query(LogComment).filter(LogComment.log_id ==log_id).all()
+    s.close()
+    return q
+
 def delete_log_file(start_time, unit_number):
     s = Session()
     s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
@@ -78,3 +118,20 @@ def get_log_status(start_time, unit_number):
 
 def is_log_status(start_time, unit_number, status_to_check):
     return (get_log_status(start_time, unit_number) == status_to_check)
+
+def new_log_comment(log_id, comment, timestamp):
+    s = Session()
+    comment = LogComment(log_id = log_id,
+                        timestamp=timestamp,
+                        comment=comment)
+    s.add(comment)
+    s.commit()
+    comment_id = comment.id
+    s.close()
+    return comment_id
+
+def delete_log_comment(comment_id):
+    s = Session()
+    s.query(LogComment).filter(LogComment.id == comment_id).delete()
+    s.commit()
+    s.close()

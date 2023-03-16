@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ vehicle['unit_number'] }} - LogServer{% endblock %}
+
+{% block content %}
+  <h1>Unit: {{ vehicle['unit_number'] }}</h1>
+  <p>vehicle type: {{ vehicle['vehicle_type'] }}</p>
+  <p>serial number: {{ vehicle['serial_number'] }}</p>
+  <p>status: {{ vehicle['status'] }}</p>
+
+  <br>
+  <hr>
+
+  {% for log in logs %}
+        <a href="./{{log['start_time']}}">
+            <h4>{{ log['start_time'] }} {{ log['unit_number'] }}</h4>
+        </a>
+        <p><b>{{ log['headline'] }}</b><br>
+            Upload time: {{ log['upload_time'] }} <br>
+            length: {{ log['length'] }} <br>
+            samples: {{ log['samples'] }} </p>
+        <hr>
+    {% endfor %}
+{% endblock %}
