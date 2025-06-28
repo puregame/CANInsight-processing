@@ -50,13 +50,13 @@ class CRUDTestCase(TestCase):
 
     def test_new_log_file(self):
         self.test_new_vehicle() # create some test vehicles
-        self.start_time1 = "2021-01-10T10:10:10.000Z"
+        self.start_time1 = datetime.fromisoformat('2021-01-10T10:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
         new_log_file_id = new_log_file(self.start_time1, "test_unit_number")
         # test new log file with all defaults
         self.assertIsInstance(new_log_file_id, int)
         log_file_db = get_log_file(self.start_time1, "test_unit_number")
-        self.assertEqual(datetime.strptime(self.start_time1, '%Y-%m-%dT%H:%M:%S.%fZ'), log_file_db.start_time)
+        self.assertEqual(self.start_time1.replace(tzinfo=None), log_file_db.start_time.replace(tzinfo=None)) # remove timezone info for SQLite
         self.assertEqual(log_file_db.processing_status, "Uploaded")
         self.assertIsNone(log_file_db.length)
         self.assertIsNone(log_file_db.samples)
@@ -66,14 +66,14 @@ class CRUDTestCase(TestCase):
         self.assertRaises(IntegrityError, new_log_file, self.start_time1, "test_unit_number")
 
         # test inserting with none as default
-        self.start_time2 = "2021-01-10T11:10:10.000Z"
+        self.start_time2 = datetime.fromisoformat('2021-01-10T11:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
         # test new log file with all defaults
         new_log_file_id = new_log_file(self.start_time2, "test_unit_number", status="Complete", 
                                        upload_time=upload_time, length=1234.7, samples=40000)
         self.assertIsInstance(new_log_file_id, int)
         log_file_db = get_log_file(self.start_time2, "test_unit_number")
-        self.assertEqual(datetime.strptime(self.start_time2, '%Y-%m-%dT%H:%M:%S.%fZ'), log_file_db.start_time)
+        self.assertEqual(self.start_time2.replace(tzinfo=None), log_file_db.start_time.replace(tzinfo=None)) # remove timezone info for SQLite
         self.assertEqual(log_file_db.processing_status, "Complete")
         self.assertEqual(log_file_db.length, 1234.7)
         self.assertEqual(log_file_db.samples, 40000)
@@ -121,11 +121,11 @@ class CRUDTestCase(TestCase):
         self.test_new_log_file()
 
         # test adding new log that already exists
-        self.assertIsNone(create_log_in_database_if_not_exists(self.start_time1, "test_unit_number"))
-        self.assertIsNone(create_log_in_database_if_not_exists(self.start_time2, "test_unit_number"))
+        self.assertIs(create_log_in_database_if_not_exists(self.start_time1, "test_unit_number"), LogFile)
+        self.assertIs(create_log_in_database_if_not_exists(self.start_time2, "test_unit_number"), LogFile)
 
         # test adding a new log to an old unit
-        start = "2021-01-10T12:10:10.000Z"
+        start = datetime.fromisoformat('2021-01-10T10:10:10.000Z'.replace("Z", "+00:00"))
         self.assertIsInstance(create_log_in_database_if_not_exists(start, "test_unit_number"), int)
         log = get_log_file(start, "test_unit_number")
         self.assertEqual(log.unit_number, "test_unit_number")
@@ -133,7 +133,7 @@ class CRUDTestCase(TestCase):
         self.assertEqual(log.samples, None)
 
         # test adding a new log to a new unit
-        start = "2021-01-10T13:10:10.000Z"
+        start = datetime.fromisoformat('2021-01-10T13:10:10.000Z'.replace("Z", "+00:00"))
         self.assertIsInstance(create_log_in_database_if_not_exists(start, "test_unit_number2", "test2_unit_type"), int)
         log = get_log_file(start, "test_unit_number2")
         self.assertEqual(log.unit_number, "test_unit_number2")
@@ -155,9 +155,8 @@ class CRUDTestCase(TestCase):
         self.assertTrue(is_log_status(self.start_time1, "test_unit_number", "Combined With Earlier LOG"))
 
     def tearDown(self):
-        """ Remove all testing airports from the db. """
-        connection = ENGINE.connect()
-        # Must clear the test patient from the test database after the test
-        connection.execute("DELETE FROM log_file;")
-        connection.execute("DELETE FROM vehicle;")
-        connection.close()
+        """Remove all test data from the database after each test."""
+        with ENGINE.begin() as connection:
+            connection.execute(LogFile.__table__.delete())
+            connection.execute(Vehicle.__table__.delete())
+            connection.close()

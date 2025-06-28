@@ -15,9 +15,18 @@ class LogConverterTestCase(TestCase):
         """ Instantiate the test. """
         pass
 
+
     def test_get_new_log_filename(self):
+        # Test log files that are a good date time
         self.assertEqual(get_new_log_filename("2021-01-01T00:00:01.990Z", "CAN_001.LOG"), "2021-01-01T00-00-01-990Z")
         self.assertEqual(get_new_log_filename("2022-12-20T17:30:02.110Z", "CAN_001.LOG"), "2022-12-20T17-30-02-110Z")
+
+        # Test log files that are too old and the date is known to be incorrect
+        self.assertEqual(get_new_log_filename("2020-01-20T17:30:02.110Z", "CAN_001.LOG"), "CAN_001.LOG")
+        self.assertEqual(get_new_log_filename("2020-01-20T17:30:02.110Z", "CAN_001.dat"), "CAN_001.dat")
+        self.assertEqual(get_new_log_filename("1990-01-01T17:30:02.110Z", "CAN_999.dat"), "CAN_999.dat")
+        self.assertEqual(get_new_log_filename("1970-01-01T01:01:00.000Z", "TEST_LOG_FILE_NAME.txt"), "TEST_LOG_FILE_NAME.txt")
+
 
     def test_checksum(self):
         """ Test the checksum function on local files. """

@@ -22,7 +22,7 @@ class LogFile(Base):
     __tablename__ = 'log_file'
     __table_args__ = (UniqueConstraint('start_time', 'unit_number', name='_start_unit_unique_constraint'), )
     id = Column(Integer, primary_key=True, autoincrement=True)
-    start_time = Column(DateTime)
+    start_time = Column(DateTime(timezone=True))
     upload_time = Column(DateTime, default=datetime.now, nullable=False)
     unit_number = Column(String, ForeignKey("vehicle.unit_number",
                                             name='vehicle_id_log_fkey',

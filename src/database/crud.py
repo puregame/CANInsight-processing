@@ -1,4 +1,6 @@
 from re import L
+from typing import Optional
+
 from database.models import *
 
 from config import DATABASE_CONFIG
@@ -103,9 +105,16 @@ def delete_log_file(start_time, unit_number):
     s.commit()
     s.close()
 
-def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type=None, original_file_name=""):
-    if get_log_file(log_start_time, unit_number) is not None:
-        return # log exists, do nothing
+def does_log_exist(log_start_time: datetime, unit_number: str) -> Boolean:
+    existing_log = get_log_file(log_start_time, unit_number)
+    if existing_log is None:
+        return False
+    else:
+        return True
+
+
+def create_log_in_database_if_not_exists(log_start_time: datetime, unit_number: str, unit_type:str="", original_file_name:str=""):
+    
     if get_vehicle_by_unit_number(unit_number) is None:
         new_vehicle(unit_number, unit_type)
     return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name)

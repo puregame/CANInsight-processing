@@ -38,8 +38,8 @@ docker image push -a docker-registry.tracksandwheels.com:5050/log_webserver
 docker build -t docker-registry.tracksandwheels.com:5050/log_processor:latest -f .\processor\Dockerfile .
 docker build -t docker-registry.tracksandwheels.com:5050/log_webserver:latest -f .\webserver\Dockerfile .
  
-docker image tag docker-registry.tracksandwheels.com:5050/log_processor:latest docker-registry.tracksandwheels.com:5050/log_processor:v0.2
-docker image tag docker-registry.tracksandwheels.com:5050/log_webserver:latest docker-registry.tracksandwheels.com:5050/log_webserver:v0.2
+docker image tag docker-registry.tracksandwheels.com:5050/log_processor:latest docker-registry.tracksandwheels.com:5050/log_processor:v0.3.11
+docker image tag docker-registry.tracksandwheels.com:5050/log_webserver:latest docker-registry.tracksandwheels.com:5050/log_webserver:v0.3.11
 
 docker image push -a docker-registry.tracksandwheels.com:5050/log_processor
 docker image push -a docker-registry.tracksandwheels.com:5050/log_webserver

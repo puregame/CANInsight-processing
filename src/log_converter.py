@@ -17,131 +17,143 @@ from helpers import read_log_to_df, get_dbc_file_list, tail, df_to_mf4
 from config import DATA_FOLDER
 from database.crud import *
 
-input_files = DATA_FOLDER / "in_logs/"
-input_files.mkdir(exist_ok=True)
-input_files_uploading = DATA_FOLDER / "in_logs/uploading"
-input_files_uploading.mkdir(exist_ok=True)
-output_files = DATA_FOLDER / "out/"
-output_files.mkdir(exist_ok=True)
-dbc_folder = DATA_FOLDER / 'dbc/'
-dbc_folder.mkdir(exist_ok=True)
+INPUT_FILES = DATA_FOLDER / "in_logs/"
+INPUT_FILES_UPLOAD = DATA_FOLDER / "in_logs/uploading"
+OUTPUT_FILES = DATA_FOLDER / "out/"
+DBC_FOLDER = DATA_FOLDER / 'dbc/'
 
-init_and_upgrade_db()
+SUBFOLDERS = [INPUT_FILES, INPUT_FILES_UPLOAD, OUTPUT_FILES, DBC_FOLDER]
 
-def create_unit_folders(unit_output_folder):
-    unit_output_folder.mkdir(parents=True, exist_ok=True)
+def setup_environment():
+    for folder in SUBFOLDERS:
+        folder.mkdir(parents=True, exist_ok=True)
+    init_and_upgrade_db()
+
+
+def create_unit_folders(unit_output_folder: Path):
     (unit_output_folder/"in_logs_processed/").mkdir(parents=True, exist_ok=True)
+    (unit_output_folder/"raw_logs/").mkdir(parents=True, exist_ok=True)
 
-def get_new_log_filename(log_start_time, file_name):
-    # get new file name for this log
-    if parser.parse(log_start_time) < datetime(year=2020, month=2, day=1, hour=1, tzinfo=pytz.UTC):
-        # if the start time is before 2020 then we know the time for this file is not correct!
-        new_file_name = file_name
-        logger.warning("CAN log {} does not have a proper start timestamp, using log file name for output file".format(new_file_name))
-    else:
-        new_file_name = "{}".format(log_start_time.replace(":", "-").replace(".","-"))
-    return new_file_name
+def get_new_log_filename(log_start_time: str, file_name: str) -> str:
+    try:
+        ts = parser.parse(log_start_time)
+        if ts < datetime(2020, 2, 1, tzinfo=pytz.UTC):
+            # if the start time is before 2020 then we know the time for this file is not correct!
+            raise ValueError("Timestamp too early")
+        # return ts.strftime("%Y-%m-%dT%H-%M-%S")
+        return "{}".format(log_start_time.replace(":", "-").replace(".","-"))
+    except ValueError:
+        logger.warning("Invalid log timestamp for file %s, using original file name", file_name)
+        return file_name
 
-def read_files_recursive(files_to_process):
-    this_file = files_to_process.pop(0)
-    logger.info("Starting processing for file name: {}".format(this_file))
-    df, meta, continues = read_log_to_df(input_files / this_file)
-    logger.info("Read log file to df")
-    meta['unit_output_folder'] = output_files/meta['unit_type']/meta['unit_number']
+def get_files_to_process(folder: Path) -> list[str]:
+    return sorted([f for f in os.listdir(folder) if f.lower().endswith('.log')])
+
+
+def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -> None:
+    logger.info("Starting processing for file: %s", file_name)
+    df, meta, continues = read_log_to_df(INPUT_FILES / file_name)
+
+    meta['unit_output_folder'] = OUTPUT_FILES / meta['unit_type'] / meta['unit_number']
     create_unit_folders(meta['unit_output_folder'])
-    meta['file_name'] = this_file
+    meta['file_name'] = file_name
     meta['len'] = len(df)
 
     new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
 
-    create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'], original_file_name=this_file)
-    # Move input log file to storage folder
-    update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
-    logger.info("Renaming file from {} to {}".format(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name)))
-    os.rename(input_files/this_file, meta['unit_output_folder']/"in_logs_processed"/"{}.log".format(new_file_name))
+    if does_log_exist(meta['log_start_time'], meta['unit_number']):
+        # the log already exiss
 
-    # if there is no log data then skip remaining processing
-    if meta['len'] == 0:  
+    create_log_in_database_if_not_exists(meta['log_start_time'], meta['unit_number'], meta['unit_type'], original_file_name=file_name)
+    update_log_file_status(meta['log_start_time'], meta['unit_number'], "LOG file Moved")
+
+    original_path = INPUT_FILES / file_name
+    archived_path = meta['unit_output_folder'] / "in_logs_processed" / f"{new_file_name}.log"
+    original_path.rename(archived_path)
+
+    if meta['len'] == 0:
         meta['log_end_time'] = meta['log_start_time']
-        return df, meta
+        update_log_file_len(meta['log_start_time'], meta['unit_number'], 0, 0)
+        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Zero Data")
+        return
 
     start_time = parser.parse(meta['log_start_time'])
-    log_len_seconds = df.iloc[-1,0]
+    log_len_seconds = df.iloc[-1, 0]
     meta['log_len_seconds'] = log_len_seconds
-    end_time = start_time + timedelta(seconds=log_len_seconds)
-    meta['log_end_time'] = end_time
+    meta['log_end_time'] = start_time + timedelta(seconds=log_len_seconds)
 
-    if continues:
-        logger.info("Log file: {} continues to next file".format(this_file))
-        next_df, next_meta = read_files_recursive(files_to_process)
+    while continues:
+        files_remaining = get_files_to_process(INPUT_FILES)
+        try:
+            next_idx = files_remaining.index(file_name) + 1
+            next_file = files_remaining[next_idx]
+        except (ValueError, IndexError):
+            logger.warning("Could not find next continued file after %s", file_name)
+            break
+
+        next_df, next_meta, continues = read_log_to_df(INPUT_FILES / next_file)
         next_start_time = parser.parse(next_meta['log_start_time'])
 
-        # if second log starts more than 10 seconds after first log, thorw a warning
-        if (start_time + timedelta(seconds=(log_len_seconds + 10))) < next_start_time:
-            logger.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
-                            is more than 10 seconds before first entry of {second_time}"\
-                            .format(second_time=next_meta['log_start_time'], **meta))
+        if meta['log_end_time'] + timedelta(seconds=10) < next_start_time:
+            logger.warning("Gap between logs too large for unit %s", meta['unit_number'])
+        if meta['log_end_time'] > next_start_time:
+            logger.warning("Overlap between logs for unit %s", meta['unit_number'])
 
-        # if second log starts before end of first log, thorw a warning
-        if end_time > next_start_time:
-            logger.warning("Warning: continued logs for type {unit_type} unit {unit_number}, last entry of {log_start_time} \
-                            is more than 1 seconds after first entry of {second_time}"\
-                            .format(second_time=next_meta['log_start_time'], **meta))
+        # Offset and combine
+        next_df['timestamp'] += meta['log_len_seconds']
+        df = df.append(next_df, ignore_index=True)
 
-        next_df['timestamp'] = next_df.timestamp + log_len_seconds
-        df = df.append(next_df)
-        meta['len'] = meta['len'] + next_meta['len']
-        update_log_file_status(next_meta['log_start_time'], next_meta['unit_number'], "Combined With Earlier LOG") # for each continues file remove the latest file from the DB
-        meta['log_end_time'] = next_meta['log_end_time'] # new end time is end time of next log
-    return df, meta
+        # Update cumulative meta
+        meta['log_len_seconds'] += next_meta['log_len_seconds']
+        meta['len'] += next_meta['len']
+        meta['log_end_time'] = parser.parse(next_meta['log_end_time'])
 
-def get_files_to_process(folder):
-    k = [k for k in os.listdir(folder) if ('.log' in k) or ('.LOG' in k)]
-    k.sort()
-    return k
+        update_log_file_status(next_meta['log_start_time'], next_meta['unit_number'], "Combined With Earlier LOG")
+
+        # Archive the continued file
+        new_continued_name = get_new_log_filename(next_meta['log_start_time'], next_meta['file_name'])
+        archived_path = meta['unit_output_folder'] / "in_logs_processed" / f"{new_continued_name}.log"
+        (INPUT_FILES / next_file).rename(archived_path)
+
+    update_log_file_len(meta['log_start_time'], meta['unit_number'], meta['log_len_seconds'], len(df))
+
+    mf4 = df_to_mf4(df)
+    del df
+    mf4_file = meta['unit_output_folder'] / f"raw_logs/raw-{new_file_name}.mf4"
+    mf4.save(mf4_file)
+    update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
+
+    try:
+        unit_dbc_files = list(get_dbc_file_list(DBC_FOLDER / meta['unit_type']))
+    except FileNotFoundError:
+        logger.warning("No DBC files found for unit type: %s", meta['unit_type'])
+        unit_dbc_files = []
+
+    all_dbc_files = [(f, 0) for f in unit_dbc_files + [f for f, _ in global_dbc_files]]
+    mf4_extract = mf4.extract_bus_logging({"CAN": all_dbc_files})
+    mf4_extract.save(meta['unit_output_folder'] / f"extracted-{new_file_name}.mf4")
+    update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
 
 def process_new_files():
     logger.debug("Looking for new CAN Log files to process")
-    files_to_process = get_files_to_process(input_files)
-    logger.debug("Data files: {}".format(files_to_process))
+    files_to_process = get_files_to_process(INPUT_FILES)
+    logger.debug("Found files: %s", files_to_process)
 
-    global_dbc_files = list(get_dbc_file_list(dbc_folder))
-    while len(files_to_process) > 0:
-        df, meta  = read_files_recursive(files_to_process)
-        if is_log_status(meta['log_start_time'], meta['unit_number'], "Uploading"):
-            # do nothing, log is still uploading and should not be processed
+    global_dbc_files = [(f, 0) for f in get_dbc_file_list(DBC_FOLDER)]
+
+    for file_name in files_to_process:
+        if is_log_status(parser.parse("2000-01-01"), "unknown", "Uploading"):
             continue
-        if meta['len'] == 0:
-            update_log_file_len(meta['log_start_time'], meta['unit_number'], 0, 0)
-            update_log_file_status(meta['log_start_time'], meta['unit_number'], "Zero Data") 
-            continue # do not process logs that have zero length
-        
-        update_log_file_len(meta['log_start_time'], meta['unit_number'], meta['log_len_seconds'], len(df))
-        
-        # todo: store meta data in mf4 file!
-        mf4 = df_to_mf4(df)
-        del df
-        # mf4.attach(str(meta).encode('utf-8'))
+        process_log_file(file_name, global_dbc_files)
 
-        new_file_name = get_new_log_filename(meta['log_start_time'], meta['file_name'])
-        mf4.save(meta['unit_output_folder'] / "raw_logs/raw-{}.mf4".format(new_file_name))
-        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved Raw MF4")
-        try:
-            unit_type_dbc_files = list(get_dbc_file_list(dbc_folder/meta['unit_type']))
-        except FileNotFoundError:
-            # dbc folder doesn't exist, skip silently
-            logger.warning("DBC File for unit type {} does not exist".format(meta['unit_type']))
-            unit_type_dbc_files = []
-        all_dbc_files = unit_type_dbc_files+global_dbc_files
-        all_dbc_files = list(zip(all_dbc_files, repeat(0)))
-
-        mf4_extract = mf4.extract_bus_logging({"CAN": all_dbc_files})
-        mf4_extract.save(meta['unit_output_folder'] / "extracted-{}.mf4".format(new_file_name))
-        update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
-    logger.info("*EXPORT COMPELTE*")
+    logger.info("*EXPORT COMPLETE*")
 
 if __name__ == "__main__":
-    while(True):
-        logger.info("Processing new files")
-        process_new_files()
-        time.sleep(120)
+    setup_environment()
+    try:
+        while True:
+            logger.info("Processing new files")
+            process_new_files()
+            time.sleep(120)
+    except KeyboardInterrupt:
+        logger.info("Shutting down gracefully.")
