@@ -4,18 +4,18 @@ from alembic.config import Config
 from alembic import command
 import os
 
+from . import ENGINE
+
 from config import DATABASE_CONFIG
 
 def init_and_upgrade_db():
     """ Initialize and/or upgrade database schema. """
-    db_url = DATABASE_CONFIG['sqlalchemy.url']
-    engine = create_engine(db_url, future=True)
     
     # Create DB file if using SQLite (the engine handles this implicitly)
-    if db_url.startswith("sqlite:///"):
+    if DATABASE_CONFIG['sqlalchemy.url'].startswith("sqlite:///"):
         # Optional: manually create tables if Alembic isn't used
         from database.models import Base  # Adjust to match your model import
-        Base.metadata.create_all(engine)
+        Base.metadata.create_all(ENGINE)
         return
 
     # PostgreSQL: run Alembic migrations

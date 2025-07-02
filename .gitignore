@@ -1,4 +1,7 @@
 *.pyc
 data/
 *.sqlite
+*.sqlite3
+*.db
 *log
+venv/

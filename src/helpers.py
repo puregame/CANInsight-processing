@@ -170,7 +170,7 @@ def df_to_mf4(df):
         np.zeros(row_count, dtype='u1'),
     ]
     sig = Signal(
-        samples=np.core.records.fromarrays(arrays, dtype=CAN_SIGNAL_DTYPE),
+        samples=np.rec.fromarrays(arrays, dtype=CAN_SIGNAL_DTYPE),
         timestamps=df['timestamp'].to_numpy(),
         name="CAN_DataFrame",
         source=CAN_SIGNAL_SOURCE,

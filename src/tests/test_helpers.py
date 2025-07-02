@@ -7,10 +7,8 @@ import numpy as np
 
 from helpers import dat_line_to_data, df_to_mf4, read_log_to_df, is_val_float, is_val_hex, get_dbc_file_list
 
-from database import db_session, ENGINE
-from database.models import LogFile, Vehicle
 
-class LogConverterTestCase(TestCase):
+class LogHelperTestCase(TestCase):
     """ Test importing data. """
 
     def setUp(self):
@@ -236,8 +234,4 @@ class LogConverterTestCase(TestCase):
 
     def tearDown(self):
         """ Remove all testing airports from the db. """
-        connection = ENGINE.connect()
-        # Must clear the test patient from the test database after the test
-        connection.execute("DELETE FROM log_file;")
-        connection.execute("DELETE FROM vehicle;")
-        connection.close()
+        pass

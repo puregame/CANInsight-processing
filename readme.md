@@ -35,6 +35,9 @@ buseye-processor/
 ├── out/          # Processed output files go here
 └── dbc/          # Store DBC files here
 
+### Log file name convention
+Log files are named based on the unit number and order in which they were processed. E.G. the first log that the processor encounters for unit123 with a unit type of Kubota will be placed in `out/Kubota/unit123/` and will be named `unit123_000001.mf4`. (Leading zeroes are used to ensure sorting by filename is effective).
+
 # Environment Variables and Configuration
 
 DB_BACKEND - if "postgres" then use postgres, otherwise use SQLITE
@@ -78,7 +81,9 @@ dbc/
 See run-docker-compose.md for details on how to run the software in docker
 
 ## Run Locally
-
+`apt install python3-pip python3.12-venv`
+`python3 -m venv venv`
+`source venv/bin/activate`
 `pip install -r processor/requirements.txt -r webserver/requirements.txt`
 `cd src`
 `python log_converter.py`
