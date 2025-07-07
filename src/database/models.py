@@ -1,6 +1,7 @@
 ### models.py ###
 
-from datetime import datetime
+from datetime import datetime, timezone
+from dateutil import parser
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Date, Float, Integer, DateTime, Boolean, ForeignKey, UniqueConstraint, LargeBinary
@@ -8,6 +9,30 @@ from sqlalchemy import Column, String, Date, Float, Integer, DateTime, Boolean, 
 import uuid
 
 Base = declarative_base()
+
+from sqlalchemy.types import TypeDecorator, DateTime
+from sqlalchemy.dialects.sqlite import DATETIME as SQLiteDateTime
+from sqlalchemy import inspect
+
+class TZNaiveDateTime(TypeDecorator):
+    impl = DateTime
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+
+        # Parse strings to datetime
+        if isinstance(value, str):
+            value = parser.isoparse(value)
+
+        # Remove timezone for SQLite
+        if isinstance(value, datetime):
+            if dialect.name == "sqlite" and value.tzinfo is not None:
+                value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
+    def process_result_value(self, value, dialect):
+        return value
 
 class Vehicle(Base):
     __tablename__ = 'vehicle'
@@ -29,9 +54,9 @@ class LogFile(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     log_number = Column(Integer, nullable=False)
 
-    log_start_time = Column(DateTime)
-    log_end_time = Column(DateTime)
-    upload_time = Column(DateTime, default=datetime.now, nullable=False)
+    log_start_time = Column(TZNaiveDateTime)
+    log_end_time = Column(TZNaiveDateTime)
+    upload_time = Column(TZNaiveDateTime, default=datetime.now, nullable=False)
     unit_number = Column(String, ForeignKey("vehicle.unit_number",
                                             name='vehicle_id_log_fkey',
                                             onupdate='CASCADE',

@@ -102,6 +102,12 @@ def get_log_file(start_time: datetime, unit_number: str) -> Optional[LogFile]:
     s.close()
     return q
 
+def get_log_file(uuid:str) -> Optional[LogFile]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.id==uuid).first()
+    s.close()
+    return q
+
 def hide_log_file(id):
     s = Session(bind=ENGINE)
     q = s.query(LogFile).filter(LogFile.id==id).update({"hide_in_web": True})

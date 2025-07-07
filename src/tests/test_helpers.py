@@ -51,7 +51,20 @@ class LogHelperTestCase(TestCase):
         self.assertEqual(meta['unit_number'], "E00123")
         self.assertEqual(meta['can_1']['bus_name'], "Main")
         self.assertEqual(len(df), 6)
-        self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 1.127, 
+        self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 0.076, 
+                                                        "CAN_BUS": 1, 
+                                                        "CAN_EXT": 0, 
+                                                        "CAN_ID": 0x18FFDD46, 
+                                                        "CAN_LEN": 8, 
+                                                        "Data0": 0x11, 
+                                                        "Data1": 0x81, 
+                                                        "Data2": 0x21, 
+                                                        "Data3": 0x00, 
+                                                        "Data4": 0x19, 
+                                                        "Data5": 0x81,
+                                                        "Data6": 0x23,
+                                                        "Data7": 0x09}, dtype=np.float64)))
+        self.assertTrue(df.iloc[5].equals(Series(data={"timestamp": 1.127, 
                                                         "CAN_BUS": 2, 
                                                         "CAN_EXT": 1, 
                                                         "CAN_ID": 0xCF62602, 
@@ -64,7 +77,7 @@ class LogHelperTestCase(TestCase):
                                                         "Data5":0,
                                                         "Data6":0,
                                                         "Data7":0}, dtype=np.float64)))
-        self.assertTrue(df.iloc[5].equals(Series(data={"timestamp": 0.268, 
+        self.assertTrue(df.iloc[4].equals(Series(data={"timestamp": 0.269, 
                                                         "CAN_BUS": 1, 
                                                         "CAN_EXT": 0, 
                                                         "CAN_ID": 913, 
@@ -212,7 +225,7 @@ class LogHelperTestCase(TestCase):
         self.assertFalse(is_val_float("DEADBEEF"))
 
     def test_get_dbc_file_list(self):
-        self.assertRaises(FileNotFoundError, get_dbc_file_list, "some_folder_that_does_not_exist")
+        self.assertRaises(FileNotFoundError, get_dbc_file_list, Path("some_folder_that_does_not_exist"))
         self.assertListEqual(list(get_dbc_file_list(Path("tests/"))), []) # look in folder with not files
         self.assertListEqual(list(get_dbc_file_list(Path("tests/test_data"))), [PosixPath('tests/test_data/test.dbc')]) # look in folder with files and a dbc
 

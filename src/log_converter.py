@@ -155,8 +155,8 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     update_log_file_len(uuid, meta['log_len_seconds'], len(df))
 
     save_mf4_files(df, meta, global_dbc_files)
-    update_log_file_status(meta['log_start_time'], meta['unit_number'], "Saved extracted MF4")
-    return {"status": "processed", "uuid": uuid, "file": file_name, "log_len": len(df)}
+    update_log_file_status(meta['uuid'], "Processing Complete")
+    return {"status": "processed", "uuid": uuid, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem']}
 
 
 def process_new_files():

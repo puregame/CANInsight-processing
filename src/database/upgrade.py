@@ -10,8 +10,6 @@ from config import DATABASE_CONFIG
 
 def init_and_upgrade_db():
     """ Initialize and/or upgrade database schema. """
-
-    print(f"URL is: {DATABASE_CONFIG['sqlalchemy.url']}")
     
     # Create DB file if using SQLite (the engine handles this implicitly)
     if DATABASE_CONFIG['sqlalchemy.url'].startswith("sqlite:///"):

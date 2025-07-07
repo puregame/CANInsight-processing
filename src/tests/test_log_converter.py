@@ -30,10 +30,20 @@ class LogConverterTestCase(TestCase):
         
         folders = ["in_logs", "in_logs/uploading", "out", "dbc"]
         self.subfolders = [DATA_FOLDER / x for x in folders]
+
+        
+        # Create target folders
+        setup_environment(self.subfolders)
+        create_unit_folders(self.unit_output_folder)
+
+        # Copy the test dbc files to the dbc folder
+        for dbc_file in get_dbc_file_list(Path("tests/test_data/dbc")):
+            shutil.copy(dbc_file, DATA_FOLDER / "dbc" / dbc_file.name)
         
 
     def test_create_unit_folders(self):
         """ Test the creation of unit folders. """
+        # create unit folders called in setup, # but we can call it again to test
         create_unit_folders(self.unit_output_folder)
 
         self.assertTrue((self.unit_output_folder / "in_logs_processed").exists())
@@ -57,7 +67,7 @@ class LogConverterTestCase(TestCase):
 
     def test_setup_environment(self):
         """ Test the setup of the environment. """
-        
+        #setup environment called in setUp, but we can call it again to test
         setup_environment(self.subfolders)
 
         # Check if the temp folder exists
@@ -93,14 +103,6 @@ class LogConverterTestCase(TestCase):
 
     def test_save_mf4_files(self):
         """ Test saving data to MF4 format with mocks. """
-        # Create target folders
-        setup_environment(self.subfolders)
-        create_unit_folders(self.unit_output_folder)
-
-        # Copy the test dbc files to the dbc folder
-        for dbc_file in get_dbc_file_list(Path("tests/test_data/dbc")):
-            shutil.copy(dbc_file, DATA_FOLDER / "dbc" / dbc_file.name)
-
         # get some data
         df, meta, continues = read_log_to_df(Path("tests/test_data/test_data_all_good_lines.log"))
         
@@ -143,7 +145,6 @@ class LogConverterTestCase(TestCase):
         processed_mf4 = MDF(processed_output_file)
         self.assertGreater(len(list(processed_mf4.channels_db)), 0, "Processed MF4 file has no signals.")
         processed_signals = [sig for sig in processed_mf4.channels_db]
-        print(processed_signals)
         self.assertTrue(any("CAN" in s for s in processed_signals), "No CAN signals in processed MF4.")
         self.assertIn("CAN1.BMS1.ChargeRelay", processed_signals, "Processed MF4 does not contain 'CAN1.BMS1.ChargeRelay' signal.")
         self.assertIn("CAN1.BMS1.DischargeRelay", processed_signals, "Processed MF4 does not contain 'CAN1.BMS1.DischargeRelay' signal.")
@@ -157,6 +158,51 @@ class LogConverterTestCase(TestCase):
         raw_mf4.close()
         processed_mf4.close()
 
+
+    def test_process_log_file_good(self):
+        """ Test processing a log file. """
+
+        # Process a log file
+        file_name = "test_data_all_good_lines.log"
+        shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name)
+
+        global_dbc_files = [(f, 0) for f in get_dbc_file_list(DATA_FOLDER / "dbc")]
+        
+        result = process_log_file(file_name, global_dbc_files)
+
+        # Check if the log file was processed correctly
+        self.assertIsInstance(result, dict)
+        self.assertIn("status", result)
+        self.assertEqual(result["status"], "processed")
+
+        # check that the input file was moved to the processed folder
+        processed_folder = self.subfolders[2] / "MM430/E00123"
+        self.assertTrue(processed_folder.exists(), "Processed folder does not exist.")
+        processed_file = processed_folder / f"{result['output_file_name']}.mf4"
+        self.assertTrue(processed_file.exists(), "Processed log file does not exist.")
+
+        # check that the input file was removed from the input folder
+        input_file = self.subfolders[0] / file_name
+        self.assertFalse(input_file.exists(), "Input log file still exists in the input folder.")
+
+        # check if raw file exists in the output folder
+        raw_output_file = processed_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4"
+        self.assertTrue(raw_output_file.exists(), "Raw output file does not exist.")
+
+        # check if the in log was moved to the processed folder
+        in_log_processed_folder = processed_folder / "in_logs_processed"
+        self.assertTrue(in_log_processed_folder.exists(), "In logs processed folder does not exist.")
+        in_log_processed_file = in_log_processed_folder / f"{result['output_file_name']}.log"
+        self.assertTrue(in_log_processed_file.exists(), "In log processed file does not exist.")
+
+        # check if log exists in the database
+        log = get_log_file(result["uuid"])
+        self.assertEqual(log.unit_number, "E00123")
+        self.assertEqual(log.processing_status, "Processing Complete")
+        self.assertEqual(log.original_file_name, file_name)
+        self.assertEqual(log.length_sec, 1.127)
+        self.assertEqual(log.samples, 6)
+        self.assertEqual(log.log_start_time, parser.parse("2021-01-10T13:53:33.993Z").replace(tzinfo=None))
 
     def tearDown(self):
         """ Remove all testing airports from the db. """
