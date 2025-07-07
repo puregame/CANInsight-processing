@@ -81,12 +81,14 @@ dbc/
 See run-docker-compose.md for details on how to run the software in docker
 
 ## Run Locally
-`apt install python3-pip python3.12-venv`
-`python3 -m venv venv`
-`source venv/bin/activate`
-`pip install -r processor/requirements.txt -r webserver/requirements.txt`
-`cd src`
-`python log_converter.py`
+```bash
+apt install python3-pip python3.12-venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r processor/requirements.txt -r webserver/requirements.txt
+cd src
+python log_converter.py
+```
 
 # Roadmap
 - No future improvements currently planned. 
@@ -102,7 +104,10 @@ See run-docker-compose.md for details on how to run the software in docker
 cd into src/ folder
 
 To run all tests:
-`python3 -m unittest discover -s tests -p "test_*.py"`
+```bash
+export DATA_FOLDER="tests/tmp"
+python3 -m unittest discover -s tests -p "test_*.py"
+```
 
 To run a specific test
 `python3 -m unittest tests.test_log_converter`

@@ -6,6 +6,8 @@ import pandas as pd
 import os
 import json
 
+from pathlib import Path
+
 from log_converter_logger import logger
 
 # Constants for CAN signal conversion
@@ -29,8 +31,8 @@ CAN_SIGNAL_SOURCE = Source(
     bus_type=v4c.BUS_TYPE_CAN,
 )
 
-def get_dbc_file_list(folder):
-    if not os.path.exists(folder):
+def get_dbc_file_list(folder: Path):
+    if not folder.exists():
         raise FileNotFoundError("DBC Folder not found.")
     return map(lambda x: folder / x, filter(lambda x: x.endswith(".dbc"), os.listdir(folder)))
 
@@ -51,7 +53,7 @@ def is_val_float(val):
     except ValueError:
         return False
 
-def read_csv_data(df):
+def read_csv_data(df: pd.DataFrame) -> [pd.DataFrame, bool]:
     continues = False
     df = df.fillna('00')
     logger.debug("\tRead CSV data to dataframe")
@@ -135,7 +137,7 @@ def read_dat_file(f):
 
     return df, continues
 
-def read_log_to_df(file):
+def read_log_to_df(file:Path) -> [pd.DataFrame, dict, bool]:
     logger.debug(f"Reading file {file} to dataframe")
     with open(file, 'r') as f:
         meta = json.loads(f.readline())
@@ -155,7 +157,7 @@ def read_log_to_df(file):
 
     return df, meta, continues
 
-def df_to_mf4(df):
+def df_to_mf4(df: pd.DataFrame) -> MDF:
     row_count = df.shape[0]
     Bytes = df[[f'Data{i}' for i in range(8)]].values.astype('u1')
     arrays = [

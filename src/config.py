@@ -4,6 +4,11 @@ from pathlib import Path
 
 
 DATA_FOLDER = Path("./can_data/")
+try:
+    DATA_FOLDER = Path(os.environ[f"DATA_FOLDER"])
+except KeyError:
+    # Keep default if env var not set
+    pass
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
 DB_BACKEND = os.getenv("DB_BACKEND", "sqlite").lower()

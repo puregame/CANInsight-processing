@@ -1,7 +1,6 @@
 from unittest import TestCase
 
 from database import ENGINE
-from database.models import LogFile, Vehicle
 from database.crud import *
 from database.upgrade import init_and_upgrade_db
 from sqlalchemy.exc import IntegrityError

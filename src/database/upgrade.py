@@ -10,6 +10,8 @@ from config import DATABASE_CONFIG
 
 def init_and_upgrade_db():
     """ Initialize and/or upgrade database schema. """
+
+    print(f"URL is: {DATABASE_CONFIG['sqlalchemy.url']}")
     
     # Create DB file if using SQLite (the engine handles this implicitly)
     if DATABASE_CONFIG['sqlalchemy.url'].startswith("sqlite:///"):
@@ -20,5 +22,5 @@ def init_and_upgrade_db():
 
     # PostgreSQL: run Alembic migrations
     alembic_cfg = Config(os.path.join(os.path.dirname(__file__), 'alembic.ini'))
-    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_CONFIG['sqlalchemy.url'])
     command.upgrade(alembic_cfg, "head")
