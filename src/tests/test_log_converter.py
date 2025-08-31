@@ -16,7 +16,7 @@ from database.crud import *
 from database import ENGINE
 
 from config import DATA_FOLDER
-        
+
 from helpers import read_log_to_df, get_dbc_file_list, df_to_mf4
 from log_converter import get_files_to_process, create_unit_folders, archive_log, merge_continued_logs, setup_environment, save_mf4_files, process_log_file, process_new_files
 
@@ -33,7 +33,7 @@ class LogConverterTestCase(TestCase):
         folders = ["in_logs", "in_logs/uploading", "out", "dbc"]
         self.subfolders = [DATA_FOLDER / x for x in folders]
 
-        self.test_data_files = ['test_data_all_good_lines.log','test_data_bad_lines.log','test_data_bad_timestamp.log','test_data_continues.log','test_data_continues1.log','test_data_dat.log','test_data_dat_continues.log','test_data_dat_continues1.log','test_data_with_csv_logtype.log']
+        self.test_data_files = ['test_data_all_good_lines.log','test_data_bad_lines.log','test_data_bad_timestamp.log','test_data_continues.log','test_data_continues1.log','test_data_continues1_different_unit_num.log','test_data_dat.log','test_data_dat_continues.log','test_data_dat_continues1.log','test_data_with_csv_logtype.log']
         
         # Create target folders
         setup_environment(self.subfolders)
@@ -45,7 +45,6 @@ class LogConverterTestCase(TestCase):
 
         self.global_dbc_files = [(f, 0) for f in get_dbc_file_list(DATA_FOLDER / "dbc")]
         
-
     def test_create_unit_folders(self):
         """ Test the creation of unit folders. """
         # create unit folders called in setup, # but we can call it again to test
@@ -53,7 +52,6 @@ class LogConverterTestCase(TestCase):
 
         self.assertTrue((self.unit_output_folder / "in_logs_processed").exists())
         self.assertTrue((self.unit_output_folder / "raw_logs").exists())
-
 
     def test_archive_log(self):
         """ Test the archiving of logs. """
@@ -68,8 +66,7 @@ class LogConverterTestCase(TestCase):
 
         self.assertFalse(test_log_file.exists())
         self.assertTrue((archive_log_file).exists())
-        
-
+    
     def test_setup_environment(self):
         """ Test the setup of the environment. """
         #setup environment called in setUp, but we can call it again to test
@@ -87,7 +84,6 @@ class LogConverterTestCase(TestCase):
         self.assertIn('log_file', tables)  # replace with actual table name(s)
         self.assertIn('vehicle', tables)  # replace with actual table name(s)
         self.assertIn('log_comment', tables)  # replace with actual table name(s)
-
 
     def test_checksum(self):
         """ Test the checksum function on local files. """
@@ -108,6 +104,10 @@ class LogConverterTestCase(TestCase):
         # Start the process, see if both show up in the output
         result = process_log_file(file_names[0], self.global_dbc_files)
 
+        # Check that input files no longer exist in the input folder
+        for file_name in file_names:
+            self.assertFalse((self.subfolders[0] / file_name).exists(), f"Input file {file_name} still exists after processing.")
+
         log_db_entry = get_log_file(result['uuid'])
         print(log_db_entry)
 
@@ -121,6 +121,7 @@ class LogConverterTestCase(TestCase):
 
         # assert status in result is "processed"
         self.assertEqual(result['status'], "processed")
+        self.assertEqual(result['multi_input_files'], True)
         #assert final log length is 6
         self.assertEqual(result['log_len'], 6)
         # assert output file name
@@ -162,6 +163,36 @@ class LogConverterTestCase(TestCase):
         raw_mf4.close()
         processed_mf4.close()
 
+    def test_merge_continued_logs_fails_unit_number(self):
+        """ Test the merging of continued logs. """
+        
+        # copy test log file to input folder
+        file_names = ["test_data_continues.log", "test_data_continues1_different_unit_num.log"]
+        for file_name in file_names:
+            shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name) 
+
+        # Start the process, see if both show up in the output
+        result = process_log_file(file_names[0], self.global_dbc_files)
+
+        # Check that first input file does not exist, second one does
+        self.assertFalse((self.subfolders[0] / file_names[0]).exists(), f"Input file {file_names[0]} still exists after processing.")
+        self.assertTrue((self.subfolders[0] / file_names[1]).exists(), f"Input file {file_names[1]} does not exist after processing.")
+
+        # assert status in result is "processed"
+        self.assertEqual(result['status'], "processed")
+        self.assertTrue(result['multi_input_files'])
+        #assert final log length is 6
+        self.assertEqual(result['log_len'], 3)
+        # assert output file name
+        self.assertEqual(result['output_file_name'], f"test_00001")
+
+        # assert that processed logs exist
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{result['output_file_name']}.log").exists())
+        # assert that output logs exist
+        self.assertTrue((self.unit_output_folder / f"{result['output_file_name']}.mf4").exists())
+        # assert that raw logs exist
+        self.assertTrue((self.unit_output_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4").exists())
+
     def test_merge_continued_logs_dat(self):
         """ Test the merging of continued logs AND test processing of MF4 to physical values """
         
@@ -172,6 +203,10 @@ class LogConverterTestCase(TestCase):
 
         # Start the process, see if both show up in the output
         result = process_log_file(file_names[0], self.global_dbc_files)
+
+        # Check that input files no longer exist in the input folder
+        for file_name in file_names:
+            self.assertFalse((self.subfolders[0] / file_name).exists(), f"Input file {file_name} still exists after processing.")
 
         # assert status in result is "processed"
         self.assertEqual(result['status'], "processed")
@@ -231,15 +266,42 @@ class LogConverterTestCase(TestCase):
         raw_mf4.close()
         processed_mf4.close()
 
-    def test_process_new_files(self):
-        """ Test full processing function """
-        # copy test log file to input folder
+    def test_process_same_file_twice(self):
+        """ Process one file twice, the second time it should do nothing and delete the input file."""
+
         file_name = "test_data_all_good_lines.log"
         shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name)
 
         # run the processing
+        process_status = process_log_file(file_name, self.global_dbc_files)
+
+        # copy again since input file got deleted
+        file_name = "test_data_all_good_lines.log"
+        shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name)
+
+        # run the processing again
+        process_status = process_log_file(file_name, self.global_dbc_files)
+        self.assertEqual(process_status['status'], "duplicate")
+
+        # Check that input files no longer exist in the input folder
+        self.assertFalse((self.subfolders[0] / file_name).exists(), f"Input file {file_name} still exists after processing.")
+
+        # check that the duplicate output exists in the archive folder
+        self.assertEqual((self.unit_output_folder / "in_logs_processed/test_00001_duplicate.log").exists(), True)
+
+    def test_process_new_files(self):
+        """ Test full processing function """
+        # copy test log file to input folder
+        file_name = "test_data_all_good_lines.log"
+        input_file = self.subfolders[0] / file_name
+        shutil.copy(Path("tests/test_data") / file_name, input_file)
+
+        # run the processing
         n_processed = process_new_files()
         self.assertEqual(n_processed, 1)
+
+        # check that the input file was removed from the input folder
+        self.assertFalse(input_file.exists(), "Input log file still exists in the input folder after processing.")
 
         # check that the line exists in the DB
         db_logs = get_all_logs_for_unit("test")
@@ -355,9 +417,9 @@ class LogConverterTestCase(TestCase):
         self.assertEqual(log.unit_number, "test")
         self.assertEqual(log.processing_status, "Processing Complete")
         self.assertEqual(log.original_file_name, file_name)
-        self.assertEqual(log.length_sec, 1.127)
+        self.assertEqual(log.length_sec, 5)
         self.assertEqual(log.samples, 6)
-        self.assertEqual(log.log_start_time, parser.parse("2021-01-10T13:53:33.993Z").replace(tzinfo=None))
+        self.assertEqual(log.log_start_time, parser.parse("2021-01-10T12:01:01.0000Z").replace(tzinfo=None))
 
     def tearDown(self):
         """ Remove all testing data from the db. """

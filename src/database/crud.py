@@ -156,6 +156,12 @@ def does_log_exist(hash: bytes, unit_number: str) -> Boolean:
         return False
     else:
         return True
+    
+def get_log_with_hash(hash: bytes, unit_number: str) -> LogFile:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hash==hash).first()
+    s.close()
+    return q
 
 
 def create_log_in_database(log_start_time: datetime, unit_number: str, hash: bytes, unit_type:str="", original_file_name:str="") -> tuple[str, int]:

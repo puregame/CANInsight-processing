@@ -57,6 +57,12 @@ def merge_continued_logs(initial_df: pd.DataFrame, initial_meta: dict, initial_c
 
         next_df, next_meta, continues = read_log_to_df(INPUT_FILES / files_remaining[0])
 
+        # compare unit types and unit numbers, if they are different do not process the next file
+        if (meta['unit_number'] != next_meta['unit_number']) or (meta['unit_type'] != next_meta['unit_type']):
+            logger.warning("Continuation Error: Unit number or type mismatch for next log after %s", meta['uuid'])
+            continues = False
+            return df, meta
+
         next_meta['log_len_seconds'] = next_df.iloc[-1, 0]
         logger.info("Extending original log length seconds from %d by %d", meta['log_len_seconds'], next_meta['log_len_seconds'])
         start_time = parser.parse(next_meta['log_start_time'])
@@ -126,7 +132,9 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     # Check if the log file has already been processed
     if does_log_exist(df_hash, meta['unit_number']):
         logger.warning("Log for %s already exists, skipping file %s", meta['unit_number'], file_name)
-        # todo: delete the file or move it to a different folder
+        # move the log file to archive with duplicate tag
+        log_db_entry = get_log_with_hash(df_hash, meta['unit_number'])
+        archive_log(log_path, meta['unit_output_folder'] / "in_logs_processed" / f"{log_db_entry.file_stem}_duplicate.log")
         return {"status": "duplicate", "file": file_name}
     
     uuid, log_num = create_log_in_database(meta['log_start_time'], 
@@ -163,7 +171,7 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     update_log_file_len(uuid, meta['log_len_seconds'], len(df))
     save_mf4_files(df, meta, global_dbc_files)
     update_log_file_status(meta['uuid'], "Processing Complete")
-    return {"status": "processed", "uuid": uuid, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem']}
+    return {"status": "processed", "uuid": uuid, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem'], "multi_input_files": continues}
 
 
 def process_new_files() -> int:
@@ -180,7 +188,7 @@ def process_new_files() -> int:
             logger.debug("No more files to process")
             break
         result = process_log_file(files_to_process[0], global_dbc_files)
-        logger.info("Processed file %s: %s", result.get('file', ''), result.get('status', ''))
+        logger.info("Processed file %s: status:%s", result.get('file', ''), result.get('status', ''))
         if result.get('status') == "processed":
             processed_count += 1
 
