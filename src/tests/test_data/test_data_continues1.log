@@ -1,0 +1,5 @@
+{"unit_type": "test", "unit_number": "test", "can_1": {"bus_number": 1, "bus_name": "Main", "baudrate": 500, "log_std": 1, "log_ext": 1, "id_filter_mask": 0, "id_filter_value": 0, "log_enabled": 1}, "can_2": {"bus_number": 2, "bus_name": "CAN2", "baudrate": 250, "log_std": 1, "log_ext": 1, "id_filter_mask": 0, "id_filter_value": 0, "log_enabled": 1}, "can_3": {"bus_number": 3, "bus_name": "CAN3", "baudrate": 250, "log_std": 1, "log_ext": 1, "id_filter_mask": 0, "id_filter_value": 0, "log_enabled": 1}, "log_start_time": "2021-01-10T13:54:33.993Z"}
+timestamp,CAN_BUS,CAN_EXT,CAN_ID,CAN_LEN,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7
+2.0,2,1,CF62602,5,01,12,00,00,00,00,00,00
+2.1,1,1,18FFDD46,8,11,81,21,00,19,81,23,09
+2.2,1,0,3E1,8,81,28,81,56,81,1F,29,54

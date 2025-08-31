@@ -50,11 +50,11 @@ class CRUDTestCase(TestCase):
 
         self.start_time1 = datetime.fromisoformat('2021-01-10T10:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
-        new_log_file_id, new_log_file_num = new_log_file(self.start_time1, "test_unit_number")
+        self.new_log_file_id, new_log_file_num = new_log_file(self.start_time1, "test_unit_number")
 
         # test new log file with all defaults
-        self.assertIsInstance(new_log_file_id, str)
-        log_file_db = get_log_file(self.start_time1, "test_unit_number")
+        self.assertIsInstance(self.new_log_file_id, str)
+        log_file_db = get_log_file(self.new_log_file_id)  # ensure log file exists
         self.assertEqual(self.start_time1.replace(tzinfo=None), log_file_db.log_start_time.replace(tzinfo=None)) # remove timezone info for SQLite
         self.assertEqual(log_file_db.processing_status, "Uploaded")
         self.assertIsNone(log_file_db.length_sec)
@@ -65,10 +65,10 @@ class CRUDTestCase(TestCase):
         self.start_time2 = datetime.fromisoformat('2021-01-10T11:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
         # test new log file with all defaults
-        new_log_file_id, new_log_file_num = new_log_file(self.start_time2, "test_unit_number", status="Complete", 
+        self.new_log_file_id2, new_log_file_num = new_log_file(self.start_time2, "test_unit_number", status="Complete",
                                        upload_time=upload_time, length_sec=1234.7, samples=40000, hash=b"testhash")
-        self.assertIsInstance(new_log_file_id, str)
-        log_file_db = get_log_file(self.start_time2, "test_unit_number")
+        self.assertIsInstance(self.new_log_file_id2, str)
+        log_file_db = get_log_file(self.new_log_file_id2)
         self.assertEqual(self.start_time2.replace(tzinfo=None), log_file_db.log_start_time.replace(tzinfo=None)) # remove timezone info for SQLite
         self.assertEqual(log_file_db.processing_status, "Complete")
         self.assertEqual(log_file_db.length_sec, 1234.7)
@@ -78,9 +78,9 @@ class CRUDTestCase(TestCase):
 
     def test_update_log_status(self):
         self.test_new_log_file()
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
         uuid1 = log.id
-        log = get_log_file(self.start_time2, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id2)  # ensure log file exists
         uuid2 = log.id
         self.assertEqual(get_log_status(uuid1), "Uploaded")
         self.assertEqual(get_log_status(uuid2), "Complete")
@@ -92,23 +92,23 @@ class CRUDTestCase(TestCase):
 
     def test_update_log_file_len(self):
         self.test_new_log_file()
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
         self.assertEqual(log.length_sec, None)
         self.assertEqual(log.samples, None)
 
 
         update_log_file_len(log.id, 10, 100)
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
         self.assertEqual(log.length_sec, 10)
         self.assertEqual(log.samples, 100)
 
         update_log_file_len(log.id, 999000, 999000)
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
         self.assertEqual(log.length_sec, 999000)
         self.assertEqual(log.samples, 999000)
 
         update_log_file_len(log.id, 0, 0)
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
         self.assertEqual(log.length_sec, 0)
         self.assertEqual(log.samples, 0)
 
@@ -118,15 +118,15 @@ class CRUDTestCase(TestCase):
 
     def test_delete_log_file(self):
         self.test_new_log_file()
-        log = get_log_file(self.start_time1, "test_unit_number")
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists
         self.assertIsNotNone(log)
         delete_log_file(log.id)
-        self.assertIsNone(get_log_file(self.start_time1, "test_unit_number"))
+        self.assertIsNone(get_log_file(self.new_log_file_id))  # ensure log file exists
 
-        log2 = get_log_file(self.start_time2, "test_unit_number")
+        log2 = get_log_file(self.new_log_file_id2)
         self.assertIsNotNone(log2)
         delete_log_file(log2.id)
-        self.assertIsNone(get_log_file(self.start_time2, "test_unit_number"))
+        self.assertIsNone(get_log_file(self.new_log_file_id2))
 
     def test_check_hash(self):
         self.test_new_log_file()
@@ -143,8 +143,8 @@ class CRUDTestCase(TestCase):
     def test_is_log_status(self):
         self.test_new_log_file()
         
-        log = get_log_file(self.start_time1, "test_unit_number")  # ensure log file exists
-        log2 = get_log_file(self.start_time2, "test_unit_number")  # ensure log file exists
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists  # ensure log file exists
+        log2 = get_log_file(self.new_log_file_id2)  # ensure log file exists
         
         self.assertTrue(is_log_status(log.id, "Uploaded"))
         self.assertFalse(is_log_status(log2.id, "Completed"))
@@ -167,12 +167,16 @@ class CRUDTestCase(TestCase):
     def test_new_log_file_missing_vehicle(self):
         # Should raise or handle vehicle not existing
         start_time = datetime.fromisoformat('2021-01-11T10:10:10.000+00:00')
+        with Session(ENGINE) as session:
+            from sqlalchemy import text
+            fk_status = session.execute(text("PRAGMA foreign_keys;")).scalar()
+            print("Foreign keys enabled:", fk_status)
         with self.assertRaises(IntegrityError):
             new_log_file(start_time, "no_such_vehicle")
 
     def test_update_log_file_status_invalid(self):
         self.test_new_log_file()
-        log = get_log_file(self.start_time1, "test_unit_number")
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists
         
         # Update with empty string
         update_log_file_status(log.id, "")
@@ -180,11 +184,11 @@ class CRUDTestCase(TestCase):
 
     def test_update_log_file_len_negative(self):
         self.test_new_log_file()
-        log = get_log_file(self.start_time1, "test_unit_number")
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists
 
         # Test negative length and samples
         update_log_file_len(log.id, -1, -100)
-        log = get_log_file(self.start_time1, "test_unit_number")
+        log = get_log_file(self.new_log_file_id)  # ensure log file exists
         self.assertEqual(log.length_sec, -1)
         self.assertEqual(log.samples, -100)  # Depends if validation is enforced
 

@@ -67,7 +67,8 @@ def new_log_file(
         samples=samples,
         processing_status=status,
         hash=hash,
-        original_file_name=original_file_name
+        original_file_name=original_file_name,
+        file_stem=f"{unit_number}_{next_log_number:05d}"
     )
 
     s.add(log)

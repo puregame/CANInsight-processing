@@ -6,6 +6,8 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 from sqlalchemy import inspect
 
+from dateutil import parser
+
 from asammdf import MDF
 
 import pandas as pd
@@ -16,7 +18,7 @@ from database import ENGINE
 from config import DATA_FOLDER
         
 from helpers import read_log_to_df, get_dbc_file_list, df_to_mf4
-from log_converter import get_files_to_process, create_unit_folders, archive_log, merge_continued_logs, setup_environment, save_mf4_files, process_log_file
+from log_converter import get_files_to_process, create_unit_folders, archive_log, merge_continued_logs, setup_environment, save_mf4_files, process_log_file, process_new_files
 
 
 class LogConverterTestCase(TestCase):
@@ -26,11 +28,12 @@ class LogConverterTestCase(TestCase):
         """ Instantiate the test. """
         DATA_FOLDER = Path("tests/tmp")
         DATA_FOLDER.mkdir(parents=True, exist_ok=True)
-        self.unit_output_folder = DATA_FOLDER / "unit_test_output"
+        self.unit_output_folder = DATA_FOLDER / "out/test/test"
         
         folders = ["in_logs", "in_logs/uploading", "out", "dbc"]
         self.subfolders = [DATA_FOLDER / x for x in folders]
 
+        self.test_data_files = ['test_data_all_good_lines.log','test_data_bad_lines.log','test_data_bad_timestamp.log','test_data_continues.log','test_data_continues1.log','test_data_dat.log','test_data_dat_continues.log','test_data_dat_continues1.log','test_data_with_csv_logtype.log']
         
         # Create target folders
         setup_environment(self.subfolders)
@@ -39,6 +42,8 @@ class LogConverterTestCase(TestCase):
         # Copy the test dbc files to the dbc folder
         for dbc_file in get_dbc_file_list(Path("tests/test_data/dbc")):
             shutil.copy(dbc_file, DATA_FOLDER / "dbc" / dbc_file.name)
+
+        self.global_dbc_files = [(f, 0) for f in get_dbc_file_list(DATA_FOLDER / "dbc")]
         
 
     def test_create_unit_folders(self):
@@ -88,18 +93,172 @@ class LogConverterTestCase(TestCase):
         """ Test the checksum function on local files. """
         pass
 
-
     def test_get_files_to_process(self):
         self.assertListEqual(get_files_to_process(Path("tests/")), [])
-        self.assertListEqual(get_files_to_process(Path("tests/test_data")), ['test_data_all_good_lines.log','test_data_bad_lines.log','test_data_bad_timestamp.log','test_data_continues.log','test_data_dat.log','test_data_dat_continues.log','test_data_with_csv_logtype.log'])
+        self.assertListEqual(get_files_to_process(Path("tests/test_data")), self.test_data_files)
 
-
-    def test_merge_continued_logs(self):
+    def test_merge_continued_logs_csv(self):
         """ Test the merging of continued logs. """
-        # This is a placeholder for the actual test implementation
-        # You would need to create mock data and call merge_continued_logs
-        pass
+        
+        # copy test log file to input folder
+        file_names = ["test_data_continues.log", "test_data_continues1.log"]
+        for file_name in file_names:
+            shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name) 
 
+        # Start the process, see if both show up in the output
+        result = process_log_file(file_names[0], self.global_dbc_files)
+
+        log_db_entry = get_log_file(result['uuid'])
+        print(log_db_entry)
+
+        self.assertEqual(log_db_entry.unit_number, "test")
+        self.assertEqual(log_db_entry.log_number, 1)
+        self.assertEqual(log_db_entry.processing_status, "Processing Complete")
+        self.assertEqual(log_db_entry.log_start_time, datetime(2021, 1, 10, 13, 53, 33, 993000))
+        self.assertEqual(log_db_entry.log_end_time, datetime(2021, 1, 10, 13, 54, 36, 193000))
+        self.assertEqual(log_db_entry.length_sec, 3.2)
+        self.assertEqual(log_db_entry.samples, 6)
+
+        # assert status in result is "processed"
+        self.assertEqual(result['status'], "processed")
+        #assert final log length is 6
+        self.assertEqual(result['log_len'], 6)
+        # assert output file name
+        self.assertEqual(result['output_file_name'], f"test_00001")
+
+        # assert that processed logs exist
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{result['output_file_name']}.log").exists())
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{result['output_file_name']}_cont01.log").exists())
+        # assert that output logs exist
+        self.assertTrue((self.unit_output_folder / f"{result['output_file_name']}.mf4").exists())
+        # assert that raw logs exist
+        self.assertTrue((self.unit_output_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4").exists())
+
+        # open raw mf4 and check that there are 6 data frames
+        raw_mf4 = MDF(self.unit_output_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4")
+        self.assertGreater(len(list(raw_mf4.channels_db)), 0, "Raw MF4 file has no signals.")
+        df = raw_mf4.to_dataframe()
+
+        expected_ids = [0xCF62602, 0x18FFDD46, 0x3E1, 0xCF62602, 0x18FFDD46, 0x3E1]
+        expected_data = [ [0x01,0x12,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x11,0x81,0x21,0x00,0x19,0x81,0x23,0x09],
+            [0x81,0x28,0x81,0x56,0x81,0x1F,0x29,0x54],
+            [0x01,0x12,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x11,0x81,0x21,0x00,0x19,0x81,0x23,0x09],
+            [0x81,0x28,0x81,0x56,0x81,0x1F,0x29,0x54]]
+
+        expected_dlcs = [5, 8, 8, 5, 8, 8]
+        
+        self.assertEqual(list(df["CAN_DataFrame.CAN_DataFrame.ID"]), expected_ids)
+        for i, (expected_bytes, expected_dlc) in enumerate(zip(expected_data, expected_dlcs)):
+            self.assertEqual(list(df["CAN_DataFrame.CAN_DataFrame.DataBytes"].iloc[i]), expected_bytes)
+            self.assertEqual(df["CAN_DataFrame.CAN_DataFrame.DLC"].iloc[i], expected_dlc)
+
+        # open output MF4 and check the data matches
+        processed_mf4 = MDF(self.unit_output_folder / f"{result['output_file_name']}.mf4")
+        self.assertEqual(len(list(processed_mf4.channels_db)), 0, "Processed MF4 file has more than zero signals.")
+        
+        # Clean up
+        raw_mf4.close()
+        processed_mf4.close()
+
+    def test_merge_continued_logs_dat(self):
+        """ Test the merging of continued logs AND test processing of MF4 to physical values """
+        
+        # copy test log file to input folder
+        file_names = ["test_data_dat_continues.log", "test_data_dat_continues1.log"]
+        for file_name in file_names:
+            shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name) 
+
+        # Start the process, see if both show up in the output
+        result = process_log_file(file_names[0], self.global_dbc_files)
+
+        # assert status in result is "processed"
+        self.assertEqual(result['status'], "processed")
+        #assert final log length is 6
+        self.assertEqual(result['log_len'], 12)
+        # assert output file name
+        self.assertEqual(result['output_file_name'], f"test_00001")
+
+        # assert that processed logs exist
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{result['output_file_name']}.log").exists())
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{result['output_file_name']}_cont01.log").exists())
+        # assert that output logs exist
+        self.assertTrue((self.unit_output_folder / f"{result['output_file_name']}.mf4").exists())
+        # assert that raw logs exist
+        self.assertTrue((self.unit_output_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4").exists())
+
+        # open raw mf4 and check that there are 12 data frames
+        raw_mf4 = MDF(self.unit_output_folder / "raw_logs" / f"raw-{result['output_file_name']}.mf4")
+        self.assertGreater(len(list(raw_mf4.channels_db)), 0, "Raw MF4 file has no signals.")
+        df = raw_mf4.to_dataframe()
+
+        expected_ids = [0x3A] * 12
+        expected_data = [
+            [0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+            [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]]
+
+        expected_dlcs = [8] * 12
+        self.assertEqual(len(df), 12)
+        self.assertEqual(list(df["CAN_DataFrame.CAN_DataFrame.ID"]), expected_ids)
+        for i, (expected_bytes, expected_dlc) in enumerate(zip(expected_data, expected_dlcs)):
+            self.assertEqual(list(df["CAN_DataFrame.CAN_DataFrame.DataBytes"].iloc[i]), expected_bytes)
+            self.assertEqual(df["CAN_DataFrame.CAN_DataFrame.DLC"].iloc[i], expected_dlc)
+
+        # open output MF4 and check the data matches
+        processed_mf4 = MDF(self.unit_output_folder / f"{result['output_file_name']}.mf4")
+        self.assertGreater(len(list(processed_mf4.channels_db)), 0, "Processed MF4 file has zero signals.")
+        df = processed_mf4.to_dataframe()
+        expected_charge_relay = [1,0]*3 + [0]*6
+        expected_discharge_relay = [1,0]*6
+        expected_time = [0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0]
+        self.assertEqual(len(df), 12)
+        self.assertEqual(list(df.index), expected_time)
+        self.assertEqual(list(df["ChargeRelay"]), expected_charge_relay)
+        self.assertEqual(list(df["DischargeRelay"]), expected_discharge_relay)
+        
+        # Clean up
+        raw_mf4.close()
+        processed_mf4.close()
+
+    def test_process_new_files(self):
+        """ Test full processing function """
+        # copy test log file to input folder
+        file_name = "test_data_all_good_lines.log"
+        shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name)
+
+        # run the processing
+        n_processed = process_new_files()
+        self.assertEqual(n_processed, 1)
+
+        # check that the line exists in the DB
+        db_logs = get_all_logs_for_unit("test")
+        print(db_logs)
+        self.assertEqual(len(db_logs), 1)
+        self.assertEqual(db_logs[0].unit_number, "test")
+        self.assertEqual(db_logs[0].length_sec, 5.0)
+        self.assertEqual(db_logs[0].log_start_time, parser.isoparse("2021-01-10T12:01:01.000"))
+        self.assertEqual(db_logs[0].samples, 6)
+        self.assertEqual(db_logs[0].log_end_time, parser.isoparse("2021-01-10T12:01:06.000"))
+
+        # check that the files exist in the output folder
+
+        # assert that processed logs exist
+        self.assertTrue((self.unit_output_folder / "in_logs_processed" / f"{db_logs[0].file_stem}.log").exists())
+        # assert that output logs exist
+        self.assertTrue((self.unit_output_folder / f"{db_logs[0].file_stem}.mf4").exists())
+        # assert that raw logs exist
+        self.assertTrue((self.unit_output_folder / "raw_logs" / f"raw-{db_logs[0].file_stem}.mf4").exists())
 
     def test_save_mf4_files(self):
         """ Test saving data to MF4 format with mocks. """
@@ -158,17 +317,13 @@ class LogConverterTestCase(TestCase):
         raw_mf4.close()
         processed_mf4.close()
 
-
     def test_process_log_file_good(self):
         """ Test processing a log file. """
 
-        # Process a log file
         file_name = "test_data_all_good_lines.log"
-        shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name)
-
-        global_dbc_files = [(f, 0) for f in get_dbc_file_list(DATA_FOLDER / "dbc")]
+        shutil.copy(Path("tests/test_data") / file_name, self.subfolders[0] / file_name) # copy test log file to input folder
         
-        result = process_log_file(file_name, global_dbc_files)
+        result = process_log_file(file_name, self.global_dbc_files)
 
         # Check if the log file was processed correctly
         self.assertIsInstance(result, dict)
@@ -176,7 +331,7 @@ class LogConverterTestCase(TestCase):
         self.assertEqual(result["status"], "processed")
 
         # check that the input file was moved to the processed folder
-        processed_folder = self.subfolders[2] / "MM430/E00123"
+        processed_folder = self.subfolders[2] / "test/test"
         self.assertTrue(processed_folder.exists(), "Processed folder does not exist.")
         processed_file = processed_folder / f"{result['output_file_name']}.mf4"
         self.assertTrue(processed_file.exists(), "Processed log file does not exist.")
@@ -197,7 +352,7 @@ class LogConverterTestCase(TestCase):
 
         # check if log exists in the database
         log = get_log_file(result["uuid"])
-        self.assertEqual(log.unit_number, "E00123")
+        self.assertEqual(log.unit_number, "test")
         self.assertEqual(log.processing_status, "Processing Complete")
         self.assertEqual(log.original_file_name, file_name)
         self.assertEqual(log.length_sec, 1.127)
@@ -205,7 +360,7 @@ class LogConverterTestCase(TestCase):
         self.assertEqual(log.log_start_time, parser.parse("2021-01-10T13:53:33.993Z").replace(tzinfo=None))
 
     def tearDown(self):
-        """ Remove all testing airports from the db. """
+        """ Remove all testing data from the db. """
         with ENGINE.begin() as connection:
             for table in reversed(Base.metadata.sorted_tables):
                 connection.execute(table.delete())

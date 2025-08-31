@@ -66,6 +66,7 @@ class LogFile(Base):
     samples = Column(Integer)
     processing_status = Column(String, default="Uploaded")
     original_file_name = Column(String)
+    file_stem = Column(String) # stem of the file name without extension
     note = Column(String)
     headline = Column(String)
     hide_in_web = Column(Boolean, default=False)

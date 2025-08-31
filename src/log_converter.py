@@ -53,8 +53,16 @@ def merge_continued_logs(initial_df: pd.DataFrame, initial_meta: dict, initial_c
         n_continuation += 1
         # get all files that are left to process, file that we want is alwasys the first one
         files_remaining = get_files_to_process(INPUT_FILES)
+        logger.info("Merging continued log %s into %s", files_remaining[0], file_name)
 
-        next_df, next_meta, continues = read_log_to_df(files_remaining[0])
+        next_df, next_meta, continues = read_log_to_df(INPUT_FILES / files_remaining[0])
+
+        next_meta['log_len_seconds'] = next_df.iloc[-1, 0]
+        logger.info("Extending original log length seconds from %d by %d", meta['log_len_seconds'], next_meta['log_len_seconds'])
+        start_time = parser.parse(next_meta['log_start_time'])
+        next_meta['log_end_time'] = start_time + timedelta(seconds=next_meta['log_len_seconds'] )
+        next_meta['len'] = len(next_df)
+
         next_start_time = parser.parse(next_meta['log_start_time'])
 
         if meta['log_end_time'] + timedelta(seconds=10) < next_start_time:
@@ -63,11 +71,11 @@ def merge_continued_logs(initial_df: pd.DataFrame, initial_meta: dict, initial_c
             logger.warning("Overlap between logs for unit %s", meta['unit_number'])
 
         next_df['timestamp'] += meta['log_len_seconds']
-        df = df.append(next_df, ignore_index=True)
+        df = pd.concat([df, next_df], ignore_index=True)
 
         meta['log_len_seconds'] += next_meta['log_len_seconds']
         meta['len'] += next_meta['len']
-        meta['log_end_time'] = parser.parse(next_meta['log_end_time'])
+        meta['log_end_time'] = next_meta['log_end_time']
 
         update_log_file_status(meta['uuid'], "Combined With Later LOG")
 
@@ -142,39 +150,42 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
         update_log_file_status(uuid, "Zero Data")
         return {"status": "zero_data", "file": file_name}
 
-    if continues:
-        df, meta = merge_continued_logs(df, meta, continues, file_name, global_dbc_files)
-
-
     # Finalize metadata: log length and end time
     log_len_seconds = df.iloc[-1, 0]
     meta['log_len_seconds'] = log_len_seconds
     start_time = parser.parse(meta['log_start_time'])
     meta['log_end_time'] = start_time + timedelta(seconds=log_len_seconds)
-    update_log_end_time(uuid, meta['log_end_time'])
-    update_log_file_len(uuid, meta['log_len_seconds'], len(df))
 
+    if continues:
+        df, meta = merge_continued_logs(df, meta, continues, file_name, global_dbc_files)
+
+    update_log_end_time(uuid, meta['log_end_time']) # update database record for end time and file len
+    update_log_file_len(uuid, meta['log_len_seconds'], len(df))
     save_mf4_files(df, meta, global_dbc_files)
     update_log_file_status(meta['uuid'], "Processing Complete")
     return {"status": "processed", "uuid": uuid, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem']}
 
 
-def process_new_files():
+def process_new_files() -> int:
     logger.debug("Looking for new CAN Log files to process")
     files_to_process = get_files_to_process(INPUT_FILES)
     logger.debug("Found files: %s", files_to_process)
 
     global_dbc_files = [(f, 0) for f in get_dbc_file_list(DBC_FOLDER)]
-    
+    processed_count = 0
+
     while True:
         files_to_process = get_files_to_process(INPUT_FILES)
         if not files_to_process:
             logger.debug("No more files to process")
             break
         result = process_log_file(files_to_process[0], global_dbc_files)
-        logger.info("Processed file %s: %s", result['file'], result['status'])
+        logger.info("Processed file %s: %s", result.get('file', ''), result.get('status', ''))
+        if result.get('status') == "processed":
+            processed_count += 1
 
     logger.info("*EXPORT COMPLETE*")
+    return processed_count
 
 
 if __name__ == "__main__":

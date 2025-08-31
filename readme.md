@@ -101,7 +101,7 @@ python log_converter.py
 
 
 # Running tests
-cd into src/ folder
+cd into src/ folder. Enable virtual environment venv with `source venv/bin/activate`.
 
 To run all tests:
 ```bash

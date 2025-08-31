@@ -73,9 +73,13 @@ def read_csv_data(df: pd.DataFrame) -> [pd.DataFrame, bool]:
     for column in ['CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
         df = df[df[column].apply(is_val_hex)]
 
-    logger.debug('\tconverting all columns into integer values')
+    logger.debug('\tconverting all hex columns into integer values')
     for column in ['CAN_ID', 'Data0', 'Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6', 'Data7']:
         df[column] = df[column].apply(hex_to_int)
+
+    logger.debug('\tconverting CAN_BUS and CAN_EXT to integer values')
+    for column in ['CAN_BUS', 'CAN_EXT']:
+        df[column] = df[column].apply(int)
 
     logger.debug('\tconversion complete')
     return df, continues
