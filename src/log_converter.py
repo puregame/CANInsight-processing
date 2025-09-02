@@ -137,13 +137,18 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
         archive_log(log_path, meta['unit_output_folder'] / "in_logs_processed" / f"{log_db_entry.file_stem}_duplicate.log")
         return {"status": "duplicate", "file": file_name}
     
-    uuid, log_num = create_log_in_database(meta['log_start_time'], 
-                                            meta['unit_number'], 
-                                            df_hash,
-                                            meta['unit_type'], 
-                                            file_name)
-    
-    meta.update({"uuid": uuid, "log_num": log_num, "file_stem": f"{meta['unit_number']}_{log_num:05d}"})
+    # Use provided uuid if present, otherwise None
+    provided_uuid = meta.get('uuid', None)
+    log = create_log_in_database(
+        meta['log_start_time'], 
+        meta['unit_number'], 
+        df_hash,
+        meta['unit_type'], 
+        file_name,
+        provided_uuid=provided_uuid
+    )
+
+    meta.update({"uuid": log.id, "log_num": log.log_number, "file_stem": log.file_stem})
 
     archived_path = meta['unit_output_folder'] / "in_logs_processed" / f"{meta['file_stem']}.log"
     archive_log(log_path, archived_path)
@@ -153,9 +158,9 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     # If there is no data in the log file, we can finalize it immediately
     if meta['len'] == 0 and not continues:
         meta['log_end_time'] = meta['log_start_time']
-        update_log_file_len(uuid, 0, 0)
-        update_log_end_time(uuid, meta['log_end_time'])
-        update_log_file_status(uuid, "Zero Data")
+        update_log_file_len(log.id, 0, 0)
+        update_log_end_time(log.id, meta['log_end_time'])
+        update_log_file_status(log.id, "Zero Data")
         return {"status": "zero_data", "file": file_name}
 
     # Finalize metadata: log length and end time
@@ -167,11 +172,11 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     if continues:
         df, meta = merge_continued_logs(df, meta, continues, file_name, global_dbc_files)
 
-    update_log_end_time(uuid, meta['log_end_time']) # update database record for end time and file len
-    update_log_file_len(uuid, meta['log_len_seconds'], len(df))
+    update_log_end_time(log.id, meta['log_end_time']) # update database record for end time and file len
+    update_log_file_len(log.id, meta['log_len_seconds'], len(df))
     save_mf4_files(df, meta, global_dbc_files)
-    update_log_file_status(meta['uuid'], "Processing Complete")
-    return {"status": "processed", "uuid": uuid, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem'], "multi_input_files": continues}
+    update_log_file_status(log.id, "Processing Complete")
+    return {"status": "processed", "uuid": log.id, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem'], "multi_input_files": continues}
 
 
 def process_new_files() -> int:

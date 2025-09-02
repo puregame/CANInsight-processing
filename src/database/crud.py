@@ -8,7 +8,7 @@ from database.models import *
 
 from sqlalchemy import desc, asc
 
-def new_vehicle(unit_number, vehicle_type, serial_number=None, status=None):
+def new_vehicle(unit_number, vehicle_type="unknown", serial_number=None, status=None):
     s = Session(bind=ENGINE)
     b = Vehicle(unit_number=unit_number, vehicle_type=vehicle_type, serial_number=serial_number, status=status)
     s.add(b)
@@ -54,8 +54,9 @@ def new_log_file(
     upload_time: datetime = None,
     length_sec: float = None,
     samples: int = None,
-    original_file_name: str = ""
-) -> tuple[str, int]:
+    original_file_name: str = "",
+    uuid_input: str = None  # Add uuid as an optional argument
+) -> LogFile:
     s = Session(bind=ENGINE)
 
     if upload_time is None:
@@ -70,9 +71,12 @@ def new_log_file(
     )
     next_log_number = (last_log.log_number + 1) if last_log else 1
 
+    # Use provided uuid if present, otherwise generate a new one
+    log_id = uuid_input if uuid_input is not None else str(uuid.uuid4())
+
     # Create new log
     log = LogFile(
-        id=str(uuid.uuid4()),
+        id=log_id,
         log_start_time=log_start_time,
         upload_time=upload_time,
         unit_number=unit_number,
@@ -87,10 +91,9 @@ def new_log_file(
 
     s.add(log)
     s.commit()
-    log_id = log.id
     log_num = log.log_number
     s.close()
-    return log_id, log_num  # or return log if you want access to all fields
+    return log
 
 
 def update_log_file_status(id,processing_status):
@@ -178,11 +181,11 @@ def get_log_with_hash(hash: bytes, unit_number: str) -> LogFile:
     return q
 
 
-def create_log_in_database(log_start_time: datetime, unit_number: str, hash: bytes, unit_type:str="", original_file_name:str="") -> tuple[str, int]:
+def create_log_in_database(log_start_time: datetime, unit_number: str, hash: bytes, unit_type:str="", original_file_name:str="", provided_uuid=None) -> LogFile:
     if get_vehicle_by_unit_number(unit_number) is None:
         # If the vehicle does not exist, create it
         new_vehicle(unit_number, unit_type)
-    return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name, upload_time=datetime.now(), hash=hash)
+    return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name, upload_time=datetime.now(), hash=hash, uuid_input=provided_uuid)
 
 def get_log_status(id) -> Optional[str]:
     s = Session(bind=ENGINE)

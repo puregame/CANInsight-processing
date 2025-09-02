@@ -28,10 +28,14 @@
             Filename: {{ log['file_stem'] }}<br>
             Upload time: {{ log['upload_time'] }}<br>
             Start time: {{ log['log_start_time'] }}<br>
-            Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
+            {% if log['length_sec'] is not none %}
+                Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
+            {% endif %}
 
-            CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
-
+            
+            {% if log['samples'] is not none %}
+                CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
+            {% endif %}
         </p>
         <hr>
     {% endfor %}

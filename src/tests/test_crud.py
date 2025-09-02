@@ -50,7 +50,8 @@ class CRUDTestCase(TestCase):
 
         self.start_time1 = datetime.fromisoformat('2021-01-10T10:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
-        self.new_log_file_id, new_log_file_num = new_log_file(self.start_time1, "test_unit_number")
+        log = new_log_file(self.start_time1, "test_unit_number")
+        self.new_log_file_id = log.id
 
         # test new log file with all defaults
         self.assertIsInstance(self.new_log_file_id, str)
@@ -65,8 +66,9 @@ class CRUDTestCase(TestCase):
         self.start_time2 = datetime.fromisoformat('2021-01-10T11:10:10.000Z'.replace("Z", "+00:00"))
         upload_time = datetime.now()
         # test new log file with all defaults
-        self.new_log_file_id2, new_log_file_num = new_log_file(self.start_time2, "test_unit_number", status="Complete",
+        log2 = new_log_file(self.start_time2, "test_unit_number", status="Complete",
                                        upload_time=upload_time, length_sec=1234.7, samples=40000, hash=b"testhash")
+        self.new_log_file_id2 = log2.id
         self.assertIsInstance(self.new_log_file_id2, str)
         log_file_db = get_log_file(self.new_log_file_id2)
         self.assertEqual(self.start_time2.replace(tzinfo=None), log_file_db.log_start_time.replace(tzinfo=None)) # remove timezone info for SQLite
