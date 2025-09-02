@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 
+SLEEP_TIME_BETWEEN_PROCESSINGS = 120 # seconds to wait between processing input files
 
 DATA_FOLDER = Path("./can_data/")
 try:

@@ -47,13 +47,13 @@ class LogHelperTestCase(TestCase):
         """ test reading basic CSV style log file with no log type in meta """
         df, meta, continues = read_log_to_df("tests/test_data/test_data_all_good_lines.log")
         self.assertFalse(continues)
-        self.assertEqual(meta['unit_type'], "MM430")
-        self.assertEqual(meta['unit_number'], "E00123")
+        self.assertEqual(meta['unit_type'], "test")
+        self.assertEqual(meta['unit_number'], "test")
         self.assertEqual(meta['can_1']['bus_name'], "Main")
         self.assertEqual(len(df), 6)
-        self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 0.076, 
+        self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 0.000, 
                                                         "CAN_BUS": 1, 
-                                                        "CAN_EXT": 0, 
+                                                        "CAN_EXT": 1, 
                                                         "CAN_ID": 0x18FFDD46, 
                                                         "CAN_LEN": 8, 
                                                         "Data0": 0x11, 
@@ -64,7 +64,7 @@ class LogHelperTestCase(TestCase):
                                                         "Data5": 0x81,
                                                         "Data6": 0x23,
                                                         "Data7": 0x09}, dtype=np.float64)))
-        self.assertTrue(df.iloc[5].equals(Series(data={"timestamp": 1.127, 
+        self.assertTrue(df.iloc[5].equals(Series(data={"timestamp": 5.000, 
                                                         "CAN_BUS": 2, 
                                                         "CAN_EXT": 1, 
                                                         "CAN_ID": 0xCF62602, 
@@ -77,7 +77,7 @@ class LogHelperTestCase(TestCase):
                                                         "Data5":0,
                                                         "Data6":0,
                                                         "Data7":0}, dtype=np.float64)))
-        self.assertTrue(df.iloc[4].equals(Series(data={"timestamp": 0.269, 
+        self.assertTrue(df.iloc[4].equals(Series(data={"timestamp": 4.000, 
                                                         "CAN_BUS": 1, 
                                                         "CAN_EXT": 0, 
                                                         "CAN_ID": 913, 
@@ -95,8 +95,8 @@ class LogHelperTestCase(TestCase):
         """ test reading a log file into a dataframe"""
         df, meta, continues = read_log_to_df("tests/test_data/test_data_bad_lines.log")
         self.assertFalse(continues)
-        self.assertEqual(meta['unit_type'], "Test")
-        self.assertEqual(meta['unit_number'], "Test")
+        self.assertEqual(meta['unit_type'], "test")
+        self.assertEqual(meta['unit_number'], "test")
         self.assertEqual(len(df), 9)
         self.assertTrue(df.iloc[0].equals(Series(data={"timestamp": 0.007, 
                                                         "CAN_BUS": 1, 

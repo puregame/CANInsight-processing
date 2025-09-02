@@ -40,13 +40,36 @@ Log files are named based on the unit number and order in which they were proces
 
 # Environment Variables and Configuration
 
-DB_BACKEND - if "postgres" then use postgres, otherwise use SQLITE
-If using postgres:
-   DB_USERNAME - default root
-   DB_PASSWORD - default root
-   DB_HOSTNAME - hostname (Default localhost)
-   DB_PORT - Database port (default 5432)
-   DB_DATABASE - Database name to use (default logserver_db)
+The processor supports two database backends: **PostgreSQL** and **SQLite**. Select the backend by setting the `DB_BACKEND` environment variable (`postgres` or `sqlite`). If not set, it defaults to `sqlite`.
+
+## PostgreSQL Configuration
+
+If `DB_BACKEND=postgres`, the following environment variables can be used to configure the database connection (defaults shown in parentheses):
+
+- `DB_USERNAME` (default: `root`)
+- `DB_PASSWORD` (default: `root`)
+- `DB_HOSTNAME` (default: `localhost`)
+- `DB_PORT` (default: `5432`)
+- `DB_DATABASE` (default: `logserver_db`)
+
+Example:
+```bash
+export DB_BACKEND=postgres
+export DB_USERNAME=myuser
+export DB_PASSWORD=mypassword
+export DB_HOSTNAME=db.example.com
+export DB_PORT=5432
+export DB_DATABASE=mydatabase
+```
+
+## SQLite Configuration
+
+If `DB_BACKEND` is not set or set to `sqlite`, the processor uses a local SQLite database file located in the data folder (e.g., `logserver_db.sqlite3`). No additional environment variables are required for SQLite.
+
+Example:
+```bash
+export DB_BACKEND=sqlite
+```
 
 ## in_logs
 Place all CSV log files you want processed in this folder.
@@ -81,12 +104,16 @@ dbc/
 See run-docker-compose.md for details on how to run the software in docker
 
 ## Run Locally
+Note: for simplicity, run in linux or WSL.
+
+
 ```bash
 apt install python3-pip python3.12-venv
 python3 -m venv venv
 source venv/bin/activate
 pip install -r processor/requirements.txt -r webserver/requirements.txt
 cd src
+export DATA_FOLDER="." # Optional: change data folder to where your data is located
 python log_converter.py
 ```
 

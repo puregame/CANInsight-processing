@@ -2,16 +2,22 @@
 {% block title %}{{ vehicle['unit_number'] }} {{ log['start_time'] }} - LogServer{% endblock %}
 
 {% block content %}
-    <h1>Log File: {{ log['start_time'] }}</h1>
-    <h2>{{ log['headline'] }}</h2>
-    <a href="/vehicles/{{ vehicle['unit_number'] }}">Unit: {{ vehicle['unit_number'] }}</a>
+    <h1>Log File: {{ "%05d" % log['log_number'] }}</h1>
+            {% if log['headline'] %}
+                <h2>{{ log['headline'] }}</h2>  
+            {% endif %}
+    <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
+        <h4> {{ vehicle['vehicle_type'] }} - {{ vehicle['unit_number'] }}</h4>
+    </a>
     <p>
-        vehicle type: {{ vehicle['vehicle_type'] }} <br>
+        Base File Name: {{ log['file_stem'] }} <br>
+        Start time: {{ log['log_start_time'] }} <br>
+        End time: {{ log['log_end_time'] }} <br>
         Upload time: {{ log['upload_time'] }} <br>
-        length: {{ log['length'] }} <br>
-        samples: {{ log['samples'] }} <br>
-        samples: {{ log['original_file_name'] }} <br>
-        <a href="/log_file/{{ vehicle['unit_number'] }}/{{ log['start_time'] }}/"> Download Log </a>
+        Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
+        CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
+        Original File Name: {{ log['original_file_name'] }} <br>
+        <a href="{{ url_for('download_log', uuid=log['id']) }}">Download Log</a>
     <hr>
 
     <H4>Comments for this log</H4>
@@ -29,16 +35,17 @@
     <hr>
     <h4>Update Headline</h4>
     
-    <form action="{{ url_for('update_log_headline', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post">
-    <label for="headline">Headline:</label>
-    <input type="text" id="headline" name="headline" placeholder="headline For Log">
-    <input type="submit" name='submit_button' value="Submit Headline"></button>
+    <form action="{{ url_for('update_log_headline', uuid=log['id'], unit_id=log['unit_number']) }}" method="post">
+        <label for="headline">Headline:</label>
+        <input type="text" id="headline" name="headline" placeholder="headline For Log"
+               value="{{ log['headline'] if log['headline'] }}">
+        <input type="submit" name='submit_button' value="Submit Headline">
     </form>
 
     <hr>
     <h4>Insert New Comment</h4>
     
-    <form action="{{ url_for('get_log', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post">
+    <form action="{{ url_for('get_log', uuid=log['id']) }}" method="post">
     <label for="comment">Comment:</label>
     <input type="text" id="comment" name="comment" placeholder="Comment About Log">
     <label for="timestamp">Timestamp:</label>
@@ -47,9 +54,17 @@
     </form>
     
     <hr>
-    <p>Hide this log file from Website: Note there is currently no way to undo this!</p>
-    <form action="{{ url_for('hide_log', start_time=log['start_time'], unit_id=log['unit_number']) }}" method="post" onsubmit="return confirm('Are you sure you want to hide this log?');">
-        <input type="submit" name='submit_button' value="Hide Log"></button>
-    </form>
+    <!-- Hide or show this log from the main list; viewable via "show hidden logs" link. -->
+    {% if log['hide_in_web'] %}
+        <p>This log file is currently hidden. You can make it visible again.</p>
+        <form action="{{ url_for('show_log', uuid=log['id']) }}" method="post" onsubmit="return confirm('Are you sure you want to show this log?');">
+            <input type="submit" name='submit_button' value="Show Log">
+        </form>
+    {% else %}
+        <p>Hide this log file from the list. Viewable via "show hidden logs"</p>
+        <form action="{{ url_for('hide_log', uuid=log['id']) }}" method="post" onsubmit="return confirm('Are you sure you want to hide this log?');">
+            <input type="submit" name='submit_button' value="Hide Log">
+        </form>
+    {% endif %}
     
 {% endblock %}

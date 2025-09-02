@@ -6,7 +6,7 @@ from typing import Optional
 from database import Session, ENGINE
 from database.models import *
 
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 
 def new_vehicle(unit_number, vehicle_type, serial_number=None, status=None):
     s = Session(bind=ENGINE)
@@ -21,11 +21,25 @@ def get_vehicles():
     s.close()
     return q
 
-def get_vehicle_by_unit_number(unit_number):
+def get_vehicle_by_unit_number(unit_number) -> Vehicle:
     s = Session(bind=ENGINE)
     q = s.query(Vehicle).filter(Vehicle.unit_number==unit_number).first()
     s.close()
     return q
+
+def get_logs_for_unit(unit_number, page=None, per_page=None, hidden=False) -> tuple[list[LogFile], bool]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(
+        LogFile.unit_number == unit_number,
+        LogFile.hide_in_web == hidden
+    ).order_by(asc(LogFile.upload_time))
+    if page is not None and per_page is not None:
+        q = q.offset((page - 1) * per_page).limit(per_page + 1)
+    result = q.all()
+    s.close()
+    has_next = len(result) > per_page
+    logs = result[:per_page]
+    return result, has_next
 
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -109,9 +123,9 @@ def get_log_file(uuid:str) -> Optional[LogFile]:
     s.close()
     return q
 
-def hide_log_file(id):
+def hide_show_log_file(id, hidden=True):
     s = Session(bind=ENGINE)
-    q = s.query(LogFile).filter(LogFile.id==id).update({"hide_in_web": True})
+    q = s.query(LogFile).filter(LogFile.id==id).update({"hide_in_web": hidden})
     s.commit()
     s.close()
     return q

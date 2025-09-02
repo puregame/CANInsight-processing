@@ -13,7 +13,7 @@ from database.upgrade import init_and_upgrade_db
 
 from helpers import read_log_to_df, get_dbc_file_list, df_to_mf4
 
-from config import DATA_FOLDER
+from config import DATA_FOLDER, SLEEP_TIME_BETWEEN_PROCESSINGS
 from database.crud import *
 
 INPUT_FILES = DATA_FOLDER / "in_logs/"
@@ -202,6 +202,6 @@ if __name__ == "__main__":
         while True:
             logger.info("Processing new files")
             process_new_files()
-            time.sleep(120)
+            time.sleep(SLEEP_TIME_BETWEEN_PROCESSINGS)
     except KeyboardInterrupt:
         logger.info("Shutting down gracefully.")

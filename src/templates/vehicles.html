@@ -6,7 +6,7 @@
   <br>
   <hr>
   {% for vehicle in vehicles %}
-        <a href="./{{vehicle['unit_number'] }}">
+        <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
             <h4>{{ vehicle['unit_number'] }}</h4>
         </a>
         Vehicle Type: <span class="badge badge-primary">{{ vehicle['vehicle_type'] }}</span>
