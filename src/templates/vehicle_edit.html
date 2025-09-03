@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Edit Vehicle - {{ vehicle['unit_number'] }}{% endblock %}
+
+{% block content %}
+  <h1>Edit Vehicle: {{ vehicle['unit_number'] }}</h1>
+  <form method="post" action="{{ url_for('edit_vehicle', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
+    <label for="vehicle_type">Vehicle Type:</label>
+    <input type="text" id="vehicle_type" name="vehicle_type" value="{{ vehicle['vehicle_type'] }}" required><br><br>
+
+    <label for="serial_number">Serial Number:</label>
+    <input type="text" id="serial_number" name="serial_number" value="{{ vehicle['serial_number'] }}" required><br><br>
+
+    <label for="status">Status:</label>
+    <input type="text" id="status" name="status" value="{{ vehicle['status'] }}" required><br><br>
+
+    <button type="submit">Save Changes</button>
+    <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">Cancel</a>
+  </form>
+{% endblock %}

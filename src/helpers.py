@@ -10,6 +10,7 @@ from pathlib import Path
 
 from log_converter_logger import logger
 
+
 # Constants for CAN signal conversion
 CAN_SIGNAL_DTYPE = np.dtype([
     ("CAN_DataFrame.BusChannel", "<u1"),

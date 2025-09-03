@@ -13,7 +13,7 @@ def init_and_upgrade_db():
     
     # Create DB file if using SQLite (the engine handles this implicitly)
     if DATABASE_CONFIG['sqlalchemy.url'].startswith("sqlite:///"):
-        # Optional: manually create tables if Alembic isn't used
+        # if we are using sqlite then do not use alembic and base create them all
         from database.models import Base  # Adjust to match your model import
         Base.metadata.create_all(ENGINE)
         return

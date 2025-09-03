@@ -1,14 +1,14 @@
 from fileinput import filename
 from pydoc import render_doc
-from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle, get_vehicles, get_comments_for_log, get_logs_for_unit, get_log_file, new_log_comment, delete_log_comment, hide_show_log_file, update_log_file_headline, update_log_file_status
+from database.crud import get_vehicle_by_unit_number, new_log_file, new_vehicle, get_vehicles, get_comments_for_log, get_logs_for_unit, get_log_file, new_log_comment, delete_log_comment, hide_show_log_file, update_log_file_headline, update_log_file_status, update_vehicle
 from flask import Flask, request, render_template, send_from_directory, redirect, url_for
 from webserver_logger import handler
 import os
-from pathlib import Path
 
 from config import DATA_FOLDER
 from database.upgrade import init_and_upgrade_db
 
+from file_helpers import check_files_exist
 
 app = Flask(__name__)
 app.logger.addHandler(handler)
@@ -39,6 +39,23 @@ def specific_unit(vehicle_type, unit_id):
         has_prev=has_prev,
         showing_hidden=False
     )
+
+@app.route("/vehicles/<vehicle_type>/<unit_id>/edit", methods=["GET", "POST"])
+def edit_vehicle(vehicle_type, unit_id):
+    vehicle = get_vehicle_by_unit_number(unit_id)
+    if request.method == "POST":
+        new_vehicle_type = request.form["vehicle_type"]
+        new_serial_number = request.form["serial_number"]
+        new_status = request.form["status"]
+        # Update the vehicle in your database or data store
+        update_vehicle(
+            unit_id,
+            vehicle_type=new_vehicle_type,
+            serial_number=new_serial_number,
+            status=new_status
+        )
+        return redirect(url_for("specific_unit", vehicle_type=new_vehicle_type, unit_id=unit_id))
+    return render_template("vehicle_edit.html", vehicle=vehicle)
 
 @app.route("/vehicles/<vehicle_type>/<unit_id>/hidden")
 def get_hidden_logs(vehicle_type, unit_id):
@@ -99,13 +116,15 @@ def get_log(uuid):
     if request.method == "POST":
         if request.form.get('submit_button') == "Submit Comment":
             comment = request.form.get("comment")
-            timestamp = (request.form.get("timestamp"))
+            timestamp = request.form.get("timestamp")
             new_log_comment(log.id, comment, timestamp)
         if request.form.get('submit_button') == "Delete Comment":
             delete_log_comment(request.form.get('comment_id'))
     vehicle = get_vehicle_by_unit_number(log.unit_number)
     comments = get_comments_for_log(log.id)
-    return render_template("log_file.html", vehicle=vehicle, log=log, comments=comments)
+
+
+    return render_template("log_file.html", vehicle=vehicle, log=log, comments=comments, files_exist=check_files_exist(output_files, vehicle, log))
 
 
 @app.route("/logs/<uuid>/download/")
@@ -120,6 +139,11 @@ def download_raw_log(uuid):
     vehicle = get_vehicle_by_unit_number(log.unit_number)
     return send_from_directory(directory=output_files/vehicle.vehicle_type/log.unit_number/"raw_logs", path="raw-" + log.file_stem + ".mf4", as_attachment=True, download_name=log.file_stem + "-raw_can" + ".mf4")
 
+@app.route("/logs/<uuid>/download_input/")
+def download_input_log(uuid):
+    log = get_log_file(uuid)
+    vehicle = get_vehicle_by_unit_number(log.unit_number)
+    return send_from_directory(directory=output_files/vehicle.vehicle_type/log.unit_number/"in_logs_processed", path=log.file_stem + ".log", as_attachment=True, download_name=log.file_stem + ".log")
 
 @app.route("/v")
 def api_version():

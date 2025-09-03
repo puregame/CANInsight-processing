@@ -2,5 +2,6 @@ pandas
 numpy
 asammdf
 psycopg2-binary
+python-dateutil
 sqlalchemy
 alembic

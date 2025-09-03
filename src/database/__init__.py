@@ -15,7 +15,6 @@ ENGINE = engine_from_config(DATABASE_CONFIG)
 from database.models import Base  # <- import AFTER Engine is defined
 # Bind Base metadata to ENGINE
 Base.metadata.bind = ENGINE
-Base.metadata.create_all(ENGINE)  # Create tables if they don’t exist
 
 Session = scoped_session(sessionmaker(bind=ENGINE))
 

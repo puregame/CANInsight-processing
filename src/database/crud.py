@@ -1,12 +1,17 @@
 # crud.py
 from re import L
 from typing import Optional
+from sqlalchemy import desc, asc
 
 
 from database import Session, ENGINE
 from database.models import *
 
-from sqlalchemy import desc, asc
+from file_helpers import move_vehicle_files
+
+from webserver_logger import logger
+
+
 
 def new_vehicle(unit_number, vehicle_type="unknown", serial_number=None, status=None):
     s = Session(bind=ENGINE)
@@ -20,6 +25,25 @@ def get_vehicles():
     q = s.query(Vehicle).all()
     s.close()
     return q
+
+def update_vehicle(unit_number, vehicle_type=None, serial_number=None, status=None):
+    s = Session(bind=ENGINE)
+    q = s.query(Vehicle).filter(Vehicle.unit_number == unit_number)
+    update_fields = {}
+    old_vehicle_type = q.first().vehicle_type
+    if vehicle_type is not None and vehicle_type != old_vehicle_type:
+        logger.debug("Moving log files to new unit type")
+        update_fields["vehicle_type"] = vehicle_type
+        move_vehicle_files(old_vehicle_type, vehicle_type, unit_number)
+
+    if serial_number is not None:
+        update_fields["serial_number"] = serial_number
+    if status is not None:
+        update_fields["status"] = status
+    if update_fields:
+        q.update(update_fields)
+    s.commit()
+    s.close()
 
 def get_vehicle_by_unit_number(unit_number) -> Vehicle:
     s = Session(bind=ENGINE)
@@ -109,6 +133,11 @@ def update_log_end_time(id, end_time: datetime):
     s.close()
 
 def update_log_file_len(id, duration, samples):
+    # Convert numpy types to native Python types
+    if hasattr(duration, "item"):
+        duration = duration.item()
+    if hasattr(samples, "item"):
+        samples = samples.item()
     s = Session(bind=ENGINE)
     s.query(LogFile).filter(LogFile.id==id).update({"length_sec": duration, "samples": samples})
     s.commit()

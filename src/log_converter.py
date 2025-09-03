@@ -120,8 +120,16 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
 
     # Read the dataframe and metadata from the log file
     df, meta, continues = read_log_to_df(log_path) 
-
     df_hash = hashlib.sha256(pd.util.hash_pandas_object(df).values).digest()
+    
+    # check if vehicle type is the same as database, if not move old vehicle files to new folder
+    vehicle = get_vehicle_by_unit_number(unit_number=meta['unit_number'])
+    if meta['unit_type'] != vehicle.vehicle_type:
+        logger.warning(f"Vehicle type mismatch for unit {meta['unit_number']}: {vehicle.vehicle_type} != {meta['unit_type']}, Moving files to new vehicle folder")
+        move_vehicle_files(old_vehicle_type=vehicle.vehicle_type, 
+                            new_vehicle_type=meta['unit_type'], 
+                            unit_number=meta['unit_number'])
+        update_vehicle(unit_number=meta['unit_number'], vehicle_type=meta['unit_type'])
 
     # Create the folder structure for the file
     meta['unit_output_folder'] = OUTPUT_FILES / meta['unit_type'] / meta['unit_number']
@@ -139,14 +147,17 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     
     # Use provided uuid if present, otherwise None
     provided_uuid = meta.get('uuid', None)
-    log = create_log_in_database(
-        meta['log_start_time'], 
-        meta['unit_number'], 
-        df_hash,
-        meta['unit_type'], 
-        file_name,
-        provided_uuid=provided_uuid
-    )
+    # check if log exists (if it was uploaded by web app it will exist, if not create it)
+    log = get_log_file(provided_uuid) if provided_uuid else None
+    if not log:
+        log = create_log_in_database(
+            meta['log_start_time'], 
+            meta['unit_number'], 
+            df_hash,
+            meta['unit_type'], 
+            file_name,
+            provided_uuid=provided_uuid
+        )
 
     meta.update({"uuid": log.id, "log_num": log.log_number, "file_stem": log.file_stem})
 
@@ -176,6 +187,7 @@ def process_log_file(file_name: str, global_dbc_files: list[tuple[Path, int]]) -
     update_log_file_len(log.id, meta['log_len_seconds'], len(df))
     save_mf4_files(df, meta, global_dbc_files)
     update_log_file_status(log.id, "Processing Complete")
+
     return {"status": "processed", "uuid": log.id, "input_file_name": file_name, "log_len": len(df), "output_file_name": meta['file_stem'], "multi_input_files": continues}
 
 
@@ -193,7 +205,7 @@ def process_new_files() -> int:
             logger.debug("No more files to process")
             break
         result = process_log_file(files_to_process[0], global_dbc_files)
-        logger.info("Processed file %s: status:%s", result.get('file', ''), result.get('status', ''))
+        logger.info("Processed file %s: status:%s", result.get('input_file_name', ''), result.get('status', ''))
         if result.get('status') == "processed":
             processed_count += 1
 

@@ -2,16 +2,25 @@
 {% block title %}{{ vehicle['vehicle_type'] }} - {{ vehicle['unit_number'] }} Logs PG{{ page }}{% endblock %}
 
 {% block content %}
-  <h1>Unit: {{ vehicle['unit_number'] }}</h1>
-  <p>vehicle type: {{ vehicle['vehicle_type'] }}</p>
-  <p>serial number: {{ vehicle['serial_number'] }}</p>
-  <p>status: {{ vehicle['status'] }}</p>
+  <h1>Unit: {{ vehicle['unit_number'] }} </h1>
+    {% if showing_hidden %}
+        <H2>Hidden Logs</H2>
+    {% else %}
+        <H2>Data Logs</H2>
+    {% endif %}
+  <p>Vehicle Type: {{ vehicle['vehicle_type'] }}<br>
+    Serial Number: {{ vehicle['serial_number'] }}<br>
+    Status: {{ vehicle['status'] }}</p>
+    <a href="{{ url_for('edit_vehicle', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
+        <button type="button">Edit Vehicle</button>
+    </a>
+    <br>
 
-{% if not showing_hidden %}
-    <a href="{{ url_for('get_hidden_logs', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Hidden Logs</a>
-{% else %}
-    <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Logs</a>
-{% endif %}
+    {% if not showing_hidden %}
+        <a href="{{ url_for('get_hidden_logs', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Hidden Logs</a>
+    {% else %}
+        <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Logs</a>
+    {% endif %}
   <br>
   <hr>
 

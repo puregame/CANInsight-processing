@@ -9,23 +9,58 @@
     <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
         <h4> {{ vehicle['vehicle_type'] }} - {{ vehicle['unit_number'] }}</h4>
     </a>
-    <p>
-        <b>Log Status: {{ log['processing_status'] }} </b><br>
-        Original File Name: {{ log['original_file_name'] }} <br>
-        Base File Name: {{ log['file_stem'] }} <br>
-        Start time: {{ log['log_start_time'] }} <br>
-        Upload time: {{ log['upload_time'] }} <br>
-        {% if log['processing_status'] == "Processing Complete" %}
-            End time: {{ log['log_end_time'] }} <br>
-            {% if log['length_sec'] is not none %}
-                Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
-            {% endif %}
-            {% if log['samples'] is not none %}
-                CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
-            {% endif %}
-            <a href="{{ url_for('download_log', uuid=log['id']) }}">Download Processed Log</a> <br>
-            <a href="{{ url_for('download_raw_log', uuid=log['id']) }}">Download Raw Log</a>
-        {% endif %}
+    <div style="display: flex; gap: 40px;">
+        <div>
+            <p>
+                <H4>Log Status: {{ log['processing_status'] }} </H4><br>
+                Original File Name: {{ log['original_file_name'] }} <br>
+                Base File Name: {{ log['file_stem'] }} <br>
+                Start time: {{ log['log_start_time'] }} <br>
+                Upload time: {{ log['upload_time'] }} <br>
+                {% if log['processing_status'] == "Processing Complete" %}
+                    End time: {{ log['log_end_time'] }} <br>
+                    {% if log['length_sec'] is not none %}
+                        Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
+                    {% endif %}
+                    {% if log['samples'] is not none %}
+                        CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
+                    {% endif %}
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <h4>File Status</h4>
+            <ul>
+                <li>
+                    <b>Regular MF4 Log (Physical Values): </b>
+                    {% if files_exist.regular_log %}
+                        <span style="color: green;">Exists</span>
+                        <a href="{{ url_for('download_log', uuid=log['id']) }}">Download</a> <br>
+                    {% else %}
+                        <span style="color: red;">Missing</span>
+                    {% endif %}
+                </li>
+                <li>
+                    Raw MF4 Log (CAN Frames): 
+                    {% if files_exist.raw_logs %}
+                        <span style="color: green;">Exists</span>
+                        <a href="{{ url_for('download_raw_log', uuid=log['id']) }}">Download</a>
+                    {% else %}
+                        <span style="color: red;">Missing</span>
+                    {% endif %}
+                </li>
+                <li>
+                    Input Text Log: 
+                    {% if files_exist.input_log_raw %}
+                        <span style="color: green;">Exists</span>
+                        <a href="{{ url_for('download_input_log', uuid=log['id']) }}">Download</a>
+                    {% else %}
+                        <span style="color: red;">Missing</span>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+    </div>
     <hr>
 
     <H4>Comments for this log</H4>
