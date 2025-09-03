@@ -183,6 +183,8 @@ dbc/
 # How to Run
 See **run-docker-compose.md** for details on how to run the software in docker.
 
+NOTE: The web interface has NO SECURITY. Do not port-forward it to the internet without proper security measures.
+
 ## Run Locally
 Note: for simplicity, run in linux or WSL.
 

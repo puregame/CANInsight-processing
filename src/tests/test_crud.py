@@ -1,7 +1,9 @@
 from unittest import TestCase
 
 from database import ENGINE
-from database.crud import *
+from database import Session
+from database.crud import get_vehicle_by_unit_number, new_vehicle, new_log_file, get_log_file, update_log_file_status, get_log_status, is_log_status, does_log_exist, delete_log_file, update_log_file_len, 
+from database.models import Base
 from database.upgrade import init_and_upgrade_db
 from sqlalchemy.exc import IntegrityError
 

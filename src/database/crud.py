@@ -143,7 +143,7 @@ def update_log_file_len(id, duration, samples):
     s.commit()
     s.close()
 
-def get_log_file(start_time: datetime, unit_number: str) -> Optional[LogFile]:
+def get_log_file_by_start_time(start_time: datetime, unit_number: str) -> Optional[LogFile]:
     s = Session(bind=ENGINE)
     q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.log_start_time==start_time).first()
     s.close()
@@ -194,7 +194,7 @@ def delete_log_file(id):
     s.commit()
     s.close()
 
-def does_log_exist(hash: bytes, unit_number: str) -> Boolean:
+def does_log_exist(hash: bytes, unit_number: str) -> bool:
     s = Session(bind=ENGINE)
     q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hash==hash).first()
     s.close()
