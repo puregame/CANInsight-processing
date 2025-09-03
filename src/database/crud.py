@@ -1,126 +1,232 @@
+# crud.py
 from re import L
+from typing import Optional
+from sqlalchemy import desc, asc
+
+
+from database import Session, ENGINE
 from database.models import *
 
-from config import DATABASE_CONFIG
-from sqlalchemy import create_engine, desc
-from sqlalchemy.orm import sessionmaker
-# sqlalchemy stuff 
+from file_helpers import move_vehicle_files
 
-print("create engine")
-engine = create_engine(DATABASE_CONFIG['sqlalchemy.url'])
-Session = sessionmaker(bind=engine)
+from webserver_logger import logger
 
-def new_vehicle(unit_number, vehicle_type, serial_number=None, status=None):
-    s = Session()
+
+
+def new_vehicle(unit_number, vehicle_type="unknown", serial_number=None, status=None):
+    s = Session(bind=ENGINE)
     b = Vehicle(unit_number=unit_number, vehicle_type=vehicle_type, serial_number=serial_number, status=status)
     s.add(b)
     s.commit()
     s.close()
 
 def get_vehicles():
-    s = Session()
+    s = Session(bind=ENGINE)
     q = s.query(Vehicle).all()
     s.close()
     return q
 
-def get_vehicle_by_unit_number(unit_number):
-    s = Session()
+def update_vehicle(unit_number, vehicle_type=None, serial_number=None, status=None):
+    s = Session(bind=ENGINE)
+    q = s.query(Vehicle).filter(Vehicle.unit_number == unit_number)
+    update_fields = {}
+    old_vehicle_type = q.first().vehicle_type
+    if vehicle_type is not None and vehicle_type != old_vehicle_type:
+        logger.debug("Moving log files to new unit type")
+        update_fields["vehicle_type"] = vehicle_type
+        move_vehicle_files(old_vehicle_type, vehicle_type, unit_number)
+
+    if serial_number is not None:
+        update_fields["serial_number"] = serial_number
+    if status is not None:
+        update_fields["status"] = status
+    if update_fields:
+        q.update(update_fields)
+    s.commit()
+    s.close()
+
+def get_vehicle_by_unit_number(unit_number) -> Vehicle:
+    s = Session(bind=ENGINE)
     q = s.query(Vehicle).filter(Vehicle.unit_number==unit_number).first()
     s.close()
     return q
 
-def new_log_file(start_time, unit_number, status="Uploaded", upload_time=None, length=None, samples=None,original_file_name=""):
-    s = Session()
+def get_logs_for_unit(unit_number, page=None, per_page=None, hidden=False) -> tuple[list[LogFile], bool]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(
+        LogFile.unit_number == unit_number,
+        LogFile.hide_in_web == hidden
+    ).order_by(asc(LogFile.upload_time))
+    if page is not None and per_page is not None:
+        q = q.offset((page - 1) * per_page).limit(per_page + 1)
+    result = q.all()
+    s.close()
+    has_next = len(result) > per_page
+    logs = result[:per_page]
+    return result, has_next
+
+from datetime import datetime
+from sqlalchemy.orm import Session
+from database.models import LogFile
+import uuid
+
+def new_log_file(
+    log_start_time: datetime,
+    unit_number: str,
+    status: str = "Uploaded",
+    hash: bytes = None,
+    upload_time: datetime = None,
+    length_sec: float = None,
+    samples: int = None,
+    original_file_name: str = "",
+    uuid_input: str = None  # Add uuid as an optional argument
+) -> LogFile:
+    s = Session(bind=ENGINE)
+
     if upload_time is None:
-        upload_time=datetime.now()
-    log = LogFile(start_time=start_time, 
-                     upload_time=upload_time, 
-                     unit_number=unit_number, 
-                     length=length,
-                     samples=samples,
-                     processing_status=status,
-                     original_file_name=original_file_name)
+        upload_time = datetime.now()
+
+    # Get next available log_number for this unit
+    last_log = (
+        s.query(LogFile)
+        .filter_by(unit_number=unit_number)
+        .order_by(LogFile.log_number.desc())
+        .first()
+    )
+    next_log_number = (last_log.log_number + 1) if last_log else 1
+
+    # Use provided uuid if present, otherwise generate a new one
+    log_id = uuid_input if uuid_input is not None else str(uuid.uuid4())
+
+    # Create new log
+    log = LogFile(
+        id=log_id,
+        log_start_time=log_start_time,
+        upload_time=upload_time,
+        unit_number=unit_number,
+        log_number=next_log_number,
+        length_sec=length_sec,
+        samples=samples,
+        processing_status=status,
+        hash=hash,
+        original_file_name=original_file_name,
+        file_stem=f"{unit_number}_{next_log_number:05d}"
+    )
+
     s.add(log)
     s.commit()
-    log_id = log.id
+    log_num = log.log_number
     s.close()
-    return log_id
+    return log
 
-def update_log_file_status(start_time, unit_number, processing_status):
-    s = Session()
-    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).update({"processing_status": processing_status})
+
+def update_log_file_status(id,processing_status):
+    s = Session(bind=ENGINE)
+    s.query(LogFile).filter(LogFile.id==id).update({"processing_status": processing_status})
     s.commit()
     s.close()
 
-def update_log_file_len(start_time, unit_number, duration, samples):
-    s = Session()
-    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).update({"length": duration, "samples": samples})
+def update_log_end_time(id, end_time: datetime):
+    s = Session(bind=ENGINE)
+    s.query(LogFile).filter(LogFile.id==id).update({"log_end_time": end_time})
     s.commit()
     s.close()
 
-def get_log_file(start_time, unit_number):
-    s = Session()
-    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()
+def update_log_file_len(id, duration, samples):
+    # Convert numpy types to native Python types
+    if hasattr(duration, "item"):
+        duration = duration.item()
+    if hasattr(samples, "item"):
+        samples = samples.item()
+    s = Session(bind=ENGINE)
+    s.query(LogFile).filter(LogFile.id==id).update({"length_sec": duration, "samples": samples})
+    s.commit()
+    s.close()
+
+def get_log_file_by_start_time(start_time: datetime, unit_number: str) -> Optional[LogFile]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.log_start_time==start_time).first()
     s.close()
     return q
 
-def hide_log_file(log_id):
-    s = Session()
-    q = s.query(LogFile).filter(LogFile.id==log_id).update({"hide_in_web": True})
+def get_log_file(uuid:str) -> Optional[LogFile]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.id==uuid).first()
+    s.close()
+    return q
+
+def hide_show_log_file(id, hidden=True):
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.id==id).update({"hide_in_web": hidden})
     s.commit()
     s.close()
     return q
 
 
-def update_log_file_headline(log_id, headline):
-    s = Session()
-    q = s.query(LogFile).filter(LogFile.id==log_id).update({"headline": headline})
+def update_log_file_headline(id, headline):
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.id==id).update({"headline": headline})
     s.commit()
     s.close()
     return q
 
-def get_logs_for_unit(unit_number):
-    s = Session()
+def get_visible_logs_for_unit(unit_number):
+    s = Session(bind=ENGINE)
     q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hide_in_web==False).order_by(desc(LogFile.upload_time)).all()
     s.close()
     return q
 
 def get_all_logs_for_unit(unit_number):
-    s = Session()
+    s = Session(bind=ENGINE)
     q = s.query(LogFile).filter(LogFile.unit_number==unit_number).all()
     s.close()
     return q
 
-def get_comments_for_log(log_id):
-    s = Session()
-    q = s.query(LogComment).filter(LogComment.log_id ==log_id).all()
+def get_comments_for_log(id):
+    s = Session(bind=ENGINE)
+    q = s.query(LogComment).filter(LogComment.log_id ==id).all()
     s.close()
     return q
 
-def delete_log_file(start_time, unit_number):
-    s = Session()
-    s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).delete()
+def delete_log_file(id):
+    s = Session(bind=ENGINE)
+    s.query(LogFile).filter(LogFile.id==id).delete()
     s.commit()
     s.close()
 
-def create_log_in_database_if_not_exists(log_start_time, unit_number, unit_type=None, original_file_name=""):
-    if get_log_file(log_start_time, unit_number) is not None:
-        return # log exists, do nothing
-    if get_vehicle_by_unit_number(unit_number) is None:
-        new_vehicle(unit_number, unit_type)
-    return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name)
-
-def get_log_status(start_time, unit_number):
-    s = Session()
-    q = s.query(LogFile.processing_status).filter(LogFile.unit_number==unit_number, LogFile.start_time==start_time).first()[0]
+def does_log_exist(hash: bytes, unit_number: str) -> bool:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hash==hash).first()
+    s.close()
+    if q is None:
+        return False
+    else:
+        return True
+    
+def get_log_with_hash(hash: bytes, unit_number: str) -> LogFile:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile).filter(LogFile.unit_number==unit_number, LogFile.hash==hash).first()
     s.close()
     return q
 
-def is_log_status(start_time, unit_number, status_to_check):
-    return (get_log_status(start_time, unit_number) == status_to_check)
+
+def create_log_in_database(log_start_time: datetime, unit_number: str, hash: bytes, unit_type:str="", original_file_name:str="", provided_uuid=None) -> LogFile:
+    if get_vehicle_by_unit_number(unit_number) is None:
+        # If the vehicle does not exist, create it
+        new_vehicle(unit_number, unit_type)
+    return new_log_file(log_start_time, unit_number, status="Uploaded",original_file_name=original_file_name, upload_time=datetime.now(), hash=hash, uuid_input=provided_uuid)
+
+def get_log_status(id) -> Optional[str]:
+    s = Session(bind=ENGINE)
+    q = s.query(LogFile.processing_status).filter(LogFile.id==id).first()
+    s.close()
+    return q[0]
+
+def is_log_status(id, status_to_check):
+    return (get_log_status(id) == status_to_check)
 
 def new_log_comment(log_id, comment, timestamp):
-    s = Session()
+    s = Session(bind=ENGINE)
     comment = LogComment(log_id = log_id,
                         timestamp=timestamp,
                         comment=comment)
@@ -131,7 +237,7 @@ def new_log_comment(log_id, comment, timestamp):
     return comment_id
 
 def delete_log_comment(comment_id):
-    s = Session()
+    s = Session(bind=ENGINE)
     s.query(LogComment).filter(LogComment.id == comment_id).delete()
     s.commit()
     s.close()

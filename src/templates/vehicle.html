@@ -1,23 +1,58 @@
 {% extends "base.html" %}
-{% block title %}{{ vehicle['unit_number'] }} - LogServer{% endblock %}
+{% block title %}{{ vehicle['vehicle_type'] }} - {{ vehicle['unit_number'] }} Logs PG{{ page }}{% endblock %}
 
 {% block content %}
-  <h1>Unit: {{ vehicle['unit_number'] }}</h1>
-  <p>vehicle type: {{ vehicle['vehicle_type'] }}</p>
-  <p>serial number: {{ vehicle['serial_number'] }}</p>
-  <p>status: {{ vehicle['status'] }}</p>
+  <h1>Unit: {{ vehicle['unit_number'] }} </h1>
+    {% if showing_hidden %}
+        <H2>Hidden Logs</H2>
+    {% else %}
+        <H2>Data Logs</H2>
+    {% endif %}
+  <p>Vehicle Type: {{ vehicle['vehicle_type'] }}<br>
+    Serial Number: {{ vehicle['serial_number'] }}<br>
+    Status: {{ vehicle['status'] }}</p>
+    <a href="{{ url_for('edit_vehicle', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">
+        <button type="button">Edit Vehicle</button>
+    </a>
+    <br>
 
+    {% if not showing_hidden %}
+        <a href="{{ url_for('get_hidden_logs', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Hidden Logs</a>
+    {% else %}
+        <a href="{{ url_for('specific_unit', vehicle_type=vehicle['vehicle_type'], unit_id=vehicle['unit_number']) }}">View Logs</a>
+    {% endif %}
   <br>
   <hr>
 
-  {% for log in logs %}
-        <a href="./{{log['start_time']}}">
-            <h4>{{ log['start_time'] }} {{ log['unit_number'] }}</h4>
+    {% for log in logs %}
+        <a href="{{ url_for('get_log', uuid=log['id']) }}">
+            <h4>
+            Log: {{ "%05d" % log['log_number'] }}
+            {% if log['headline'] %}
+                - {{ log['headline'] }}
+            {% endif %}
+            </h4>
         </a>
-        <p><b>{{ log['headline'] }}</b><br>
-            Upload time: {{ log['upload_time'] }} <br>
-            length: {{ log['length'] }} <br>
-            samples: {{ log['samples'] }} </p>
+        <p>
+            Filename: {{ log['file_stem'] }}<br>
+            Upload time: {{ log['upload_time'] }}<br>
+            Start time: {{ log['log_start_time'] }}<br>
+            {% if log['length_sec'] is not none %}
+                Length: {{ "%02d" % (log['length_sec'] // 3600) }}:{{ "%02d" % ((log['length_sec'] % 3600) // 60) }}:{{ "%02d" % (log['length_sec'] % 60) }} (HH:MM:SS)<br>
+            {% endif %}
+
+            
+            {% if log['samples'] is not none %}
+                CAN Frames: {{ "{:,}".format(log['samples']) }} <br>
+            {% endif %}
+        </p>
         <hr>
     {% endfor %}
+    
+    {% if has_prev %}
+        <a href="?page={{ page - 1 }}">Previous</a>
+    {% endif %}
+    {% if has_next %}
+        <a href="?page={{ page + 1 }}">Next</a>
+    {% endif %}
 {% endblock %}

@@ -1,25 +1,31 @@
 version: '3'
 services:
   webserver:
-    image: docker-registry.tracksandwheels.com:5050/log_webserver:latest
+    image: log_webserver:latest
     ports:
       - 5000:5000
     volumes:
       - log-processor-data:/data
     environment:
+      DB_BACKEND: postgres
       DB_USER: root # change this for your setup
       DB_PASSWORD: root # Chagne this for your setup
       DB_port: 5432 # default
       DB_HOSTNAME: database # default
       DB_DATABASE: logserver_db # default
+      DATA_FOLDER: /data
   processor:
-    image: docker-registry.tracksandwheels.com:5050/log_processor:latest
+    image: log_processor:latest
     volumes:
       - log-processor-data:/data
     environment:
-      DB_USER: root
-      DB_PASSWORD: root
-
+      DB_BACKEND: postgres
+      DB_USER: root # change this for your setup
+      DB_PASSWORD: root # Chagne this for your setup
+      DB_port: 5432 # default
+      DB_HOSTNAME: database # default
+      DB_DATABASE: logserver_db # default
+      DATA_FOLDER: /data
 # if using local database
   database:
     image: postgres
@@ -36,7 +42,7 @@ services:
     image: dpage/pgadmin4
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_EMAIL: admin
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
       - "5080:80"
